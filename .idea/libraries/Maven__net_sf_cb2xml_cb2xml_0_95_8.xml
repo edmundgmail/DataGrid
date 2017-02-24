@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="Maven: net.sf.cb2xml:cb2xml:0.95.8">
+    <CLASSES>
+      <root url="jar://$MAVEN_REPOSITORY$/net/sf/cb2xml/cb2xml/0.95.8/cb2xml-0.95.8.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$MAVEN_REPOSITORY$/net/sf/cb2xml/cb2xml/0.95.8/cb2xml-0.95.8-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$MAVEN_REPOSITORY$/net/sf/cb2xml/cb2xml/0.95.8/cb2xml-0.95.8-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

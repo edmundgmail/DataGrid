@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/CoreFramework/CoreFramework.iml" filepath="$PROJECT_DIR$/CoreFramework/CoreFramework.iml" />
+      <module fileurl="file://$PROJECT_DIR$/DataGrid.iml" filepath="$PROJECT_DIR$/DataGrid.iml" />
+      <module fileurl="file://$PROJECT_DIR$/DataNavigatorUserApi/DataNavigatorUserApi.iml" filepath="$PROJECT_DIR$/DataNavigatorUserApi/DataNavigatorUserApi.iml" />
+      <module fileurl="file://$PROJECT_DIR$/SimpleREST/SimpleREST.iml" filepath="$PROJECT_DIR$/SimpleREST/SimpleREST.iml" />
+      <module fileurl="file://$PROJECT_DIR$/SparkVerticle/SparkVerticle.iml" filepath="$PROJECT_DIR$/SparkVerticle/SparkVerticle.iml" />
+      <module fileurl="file://$PROJECT_DIR$/CoreFramework/ent-data-grid.iml" filepath="$PROJECT_DIR$/CoreFramework/ent-data-grid.iml" />
+    </modules>
+  </component>
+</project>
