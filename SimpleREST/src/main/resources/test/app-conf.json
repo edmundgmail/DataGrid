@@ -1,7 +1,6 @@
 {
   "http.port" : 8082,
   "hdfs.conf" : "hdfs://localhost:8020/",
-  "eventbus.spark" : "com.ddp.spark.SparkVerticle",
   "mysql.driver.class": "com.mysql.jdbc.Driver",
   "mysql.url":"jdbc:mysql://localhost:3306/metadata_ddp?user=root&password=password"
 

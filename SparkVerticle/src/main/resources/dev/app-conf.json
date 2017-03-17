@@ -1,5 +1,5 @@
 {
-  "spark.master":"local[2]",
+  "spark.master":"yarn",
   "spark.appname":"my-spark-app",
   "hdfs.conf" : "hdfs://localhost:8020/"
 }

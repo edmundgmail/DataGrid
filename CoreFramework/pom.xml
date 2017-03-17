@@ -1,5 +1,14 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0">
+
+
+    <parent>
+        <groupId>com.ddp</groupId>
+        <artifactId>DataGrid</artifactId>
+        <version>0.1-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.ddp</groupId>
     <artifactId>CoreFramework</artifactId>
@@ -12,14 +21,6 @@
     </organization>
 
 
-    <properties>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <spark.version>2.1.0</spark.version>
-        <hadoop.version>2.6.0-cdh5.8.0</hadoop.version>
-        <scala.version>2.11.6</scala.version>
-        <java.version>1.8</java.version>
-        <vertx.version>3.3.3</vertx.version>
-    </properties>
 
     <dependencies>
         <dependency>
@@ -82,6 +83,13 @@
             <artifactId>vertx-web-templ-mvel</artifactId>
             <version>${vertx.version}</version>
         </dependency>
+
+        <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-kafka-client</artifactId>
+            <version>${vertx.version}</version>
+        </dependency>
+
         <dependency>
             <groupId>io.vertx</groupId>
             <artifactId>vertx-web-templ-thymeleaf</artifactId>
@@ -114,7 +122,7 @@
         <dependency>
             <groupId>com.ddp.access</groupId>
             <artifactId>DataNavigatorUserApi</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <version>0.1-SNAPSHOT</version>
             <scope>compile</scope>
         </dependency>
 
@@ -443,6 +451,7 @@
             <version>${vertx.version}</version>
         </dependency>
 -->
+
     </dependencies>
  <build>
     <pluginManagement>

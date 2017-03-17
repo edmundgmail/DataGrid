@@ -1,5 +1,14 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0">
+
+    <parent>
+        <groupId>com.ddp</groupId>
+        <artifactId>DataGrid</artifactId>
+        <version>0.1-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.ddp</groupId>
     <artifactId>SparkVerticle</artifactId>
@@ -12,15 +21,6 @@
     </organization>
 
 
-    <properties>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <spark.version>2.1.0</spark.version>
-        <hadoop.version>2.6.0-cdh5.8.0</hadoop.version>
-        <scala.version>2.11.6</scala.version>
-        <java.version>1.8</java.version>
-        <vertx.version>3.3.3</vertx.version>
-    </properties>
-
     <dependencies>
 
         <dependency>
@@ -29,6 +29,16 @@
             <version>0.1</version>
             <scope>compile</scope>
         </dependency>
+
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-streaming-kafka-0-10_2.11</artifactId>
+            <version>2.1.0</version>
+            <scope>compile</scope>
+        </dependency>
+
+
+
     </dependencies>
  <build>
     <pluginManagement>
@@ -42,7 +52,6 @@
     </pluginManagement>
 
     <plugins>
-
         <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-shade-plugin</artifactId>
@@ -80,7 +89,6 @@
                 </execution>
             </executions>
         </plugin>
-
 
       <plugin>
         <groupId>net.alchim31.maven</groupId>
@@ -142,6 +150,7 @@
     <profiles>
         <profile>
             <id>local</id>
+
             <build>
                 <resources>
                     <resource>
@@ -151,9 +160,49 @@
                         <directory>src/main/resources/local</directory>
                     </resource>
                 </resources>
+
+                <!--plugins>
+                    <plugin>
+                        <groupId>net.alchim31.maven</groupId>
+                        <artifactId>yuicompressor-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>compress</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <nosuffix>true</nosuffix>
+                        </configuration>
+                    </plugin>
+                    <plugin>
+                        <artifactId>maven-assembly-plugin</artifactId>
+                        <version>2.5.1</version>
+                        <configuration>
+                            <descriptors>
+                                <descriptor>src/main/assembly/assembly.xml</descriptor>
+                            </descriptors>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>dist-assembly</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>single</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins-->
+
             </build>
+
             <activation>
                 <activeByDefault>true</activeByDefault>
+                <file>
+                    <exists>src/main/assembly/assembly.xml</exists>
+                </file>
             </activation>
         </profile>
         <profile>

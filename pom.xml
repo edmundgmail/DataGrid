@@ -20,9 +20,20 @@ limitations under the License.
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.ddp</groupId>
   <artifactId>DataGrid</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
+  <version>0.1-SNAPSHOT</version>
   <name>Entrprise Data Grid</name>
   <packaging>pom</packaging>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <spark.version>2.1.0</spark.version>
+    <hadoop.version>2.6.0-cdh5.8.0</hadoop.version>
+    <scala.version>2.11.6</scala.version>
+    <java.version>1.8</java.version>
+    <vertx.version>3.4.0.Beta1</vertx.version>
+    <slf4j.version>1.7.22</slf4j.version>
+  </properties>
+
 
   <modules>
     <module>DataNavigatorUserApi</module>
@@ -30,6 +41,54 @@ limitations under the License.
     <module>SparkVerticle</module>
       <module>SimpleREST</module>
   </modules>
+
+  <dependencies>
+    <!-- https://mvnrepository.com/artifact/org.apache.kafka/kafka_2.10 -->
+    <dependency>
+      <groupId>org.apache.kafka</groupId>
+      <artifactId>kafka_2.11</artifactId>
+      <version>0.10.2.0</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>${slf4j.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-log4j12</artifactId>
+      <version>${slf4j.version}</version>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>jcl-over-slf4j</artifactId>
+      <version>${slf4j.version}</version>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>log4j</groupId>
+      <artifactId>log4j</artifactId>
+      <version>1.2.17</version>
+      <scope>runtime</scope>
+    </dependency>
+
+    <!-- https://mvnrepository.com/artifact/commons-configuration/commons-configuration -->
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-configuration2</artifactId>
+      <version>2.0</version>
+    </dependency>
+    <!-- https://mvnrepository.com/artifact/commons-beanutils/commons-beanutils -->
+    <dependency>
+      <groupId>commons-beanutils</groupId>
+      <artifactId>commons-beanutils</artifactId>
+      <version>1.8.3</version>
+    </dependency>
+
+
+  </dependencies>
 
 </project>
 

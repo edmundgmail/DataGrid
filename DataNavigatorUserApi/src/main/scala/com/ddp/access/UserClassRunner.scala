@@ -1,12 +1,17 @@
 package com.ddp.access
 
 
-trait UserParameter
+trait UserParameter {
+	def className:String
+}
 
-case class UserClassParameter(userClassName:String) extends UserParameter  //code 2
+case class BaseRequest(sessionKey : Long,  parameter: UserParameter)
+
+case class UserClassParameter(override val className:String, userClassName:String) extends UserParameter
 
 case class CopybookIngestionParameter(    //code 1
-																			 conn:String,
+																		 override  val className: String,
+                                          conn:String,
 																			 cpyBookName : String,
 																			 cpyBookHdfsPath : String,
 																			 dataFileHdfsPath: String = "",
@@ -16,9 +21,9 @@ case class CopybookIngestionParameter(    //code 1
 																			 splitOptoin: String = "SplitNone"
 																		 )  extends UserParameter
 
-case class JarParamter(hdfsPaths:String)  extends UserParameter  //code 3
-case class ScalaSourceParameter(srcHdfsPath: String)  extends UserParameter  //code4
+case class JarParamter(override  val className: String, hdfsPaths:String)  extends UserParameter
 
+case class ScalaSourceParameter(override val className : String, srcHdfsPath: String)  extends UserParameter
 
 trait UserClassRunner{
 	def run () : Any 
