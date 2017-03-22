@@ -19,11 +19,7 @@ public class BaseRequestDeserializer implements Deserializer<BaseRequest> {
 
     public void configure(Map<String, ?> configs, boolean isKey) {
 
-        userParameterDeserializer = new UserParameterDeserializer();
-
-        userParameterDeserializer.registerDataType(CopybookIngestionParameter.class.getName(), CopybookIngestionParameter.class);
-        userParameterDeserializer.registerDataType(JarParamter.class.getName(), JarParamter.class);
-        userParameterDeserializer.registerDataType(ScalaSourceParameter.class.getName(), ScalaSourceParameter.class);
+        userParameterDeserializer = UserParameterDeserializer.getInstance();
 
         gson = new GsonBuilder().registerTypeAdapter(UserParameter.class, userParameterDeserializer).create();
 

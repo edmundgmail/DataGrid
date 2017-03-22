@@ -25,6 +25,9 @@ case class JarParamter(override  val className: String, hdfsPaths:String)  exten
 
 case class ScalaSourceParameter(override val className : String, srcHdfsPath: String)  extends UserParameter
 
+case class QueryParameter(override val className: String, sql:String) extends UserParameter
+
+
 trait UserClassRunner{
 	def run () : Any 
 }

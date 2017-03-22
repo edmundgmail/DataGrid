@@ -3,6 +3,7 @@
   "hdfs.conf": "hdfs://localhost:8020/",
   "mysql.driver.class": "com.mysql.jdbc.Driver",
   "mysql.url": "jdbc:mysql://localhost:3306/metadata_ddp?user=root&password=password",
+  "eventbus.spark":"eventbus.spark",
   "address":"ev-tst",
   "groupId" : "1",
   "kafkaTopic" : "topic123",

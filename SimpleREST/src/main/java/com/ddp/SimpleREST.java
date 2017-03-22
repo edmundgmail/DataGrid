@@ -73,30 +73,37 @@ import rx.Observable;
 
     private UserParameterDeserializer userParameterDeserializer;
   private Gson gson;
-
+    //private EventBus eventBus;
  // public static void main(String argv[]){
         //Runner.runExample(SimpleREST.class);
     //}
 
 
   public static void main(String argv[]){
-      Vertx vertx = Vertx.vertx();
-      final JsonObject js = new JsonObject();
-      vertx.fileSystem().readFile("app-conf.json", result -> {
 
-          if (result.succeeded()) {
-              Buffer buff = result.result();
-              js.mergeIn(new JsonObject(buff.toString()));
-              DeploymentOptions options = new DeploymentOptions().setConfig(js).setMaxWorkerExecuteTime(5000).setWorker(true).setWorkerPoolSize(30);
-              vertx.deployVerticle(SimpleREST.class.getName(), options);
-          } else {
-              System.err.println("Oh oh ..." + result.cause());
+      VertxOptions options = new VertxOptions().setBlockedThreadCheckInterval(200000000);
+      options.setClustered(true);
+
+      Vertx.clusteredVertx(options, res -> {
+          if (res.succeeded()) {
+              Vertx vertx = res.result();
+              final JsonObject js = new JsonObject();
+              vertx.fileSystem().readFile("app-conf.json", result -> {
+                  if (result.succeeded()) {
+                      Buffer buff = result.result();
+                      js.mergeIn(new JsonObject(buff.toString()));
+                      DeploymentOptions deploymentOptions = new DeploymentOptions().setConfig(js).setMaxWorkerExecuteTime(5000).setWorker(true).setWorkerPoolSize(5);
+                      vertx.deployVerticle(SimpleREST.class.getName(), deploymentOptions);
+                  } else {
+                      System.err.println("Oh oh ..." + result.cause());
+                  }
+              });
+
           }
       });
+    }
 
-  }
-
-    @Override
+  @Override
   public void start() {
 
     setUpInitialData();
@@ -116,8 +123,10 @@ import rx.Observable;
       router.post("/ingestion").handler(this::postIngestion);
 
       router.post("/runUserClass").handler(this::postRunUserClass);
-
+      router.post("/runQuery").handler(this::postRunQuery);
       //router.route("/*").handler(StaticHandler.create());
+      //eventBus = getVertx().eventBus();
+      //eventBus.registerDefaultCodec(CustomMessage.class, new CustomMessageCodec());
 
       vertx.createHttpServer().requestHandler(router::accept).listen(config().getInteger("http.port", 9001));
 
@@ -128,12 +137,7 @@ import rx.Observable;
         consumer.subscribe("topic123");
         */
 
-        userParameterDeserializer = new UserParameterDeserializer();
-
-        userParameterDeserializer.registerDataType(CopybookIngestionParameter.class.getName(), CopybookIngestionParameter.class);
-        userParameterDeserializer.registerDataType(JarParamter.class.getName(), JarParamter.class);
-        userParameterDeserializer.registerDataType(ScalaSourceParameter.class.getName(), ScalaSourceParameter.class);
-
+        userParameterDeserializer = UserParameterDeserializer.getInstance();
         gson = new GsonBuilder().registerTypeAdapter(UserParameter.class, userParameterDeserializer).create();
 
 
@@ -154,18 +158,16 @@ import rx.Observable;
                 LOGGER.info("buffer=" + buffer.toString());
                 BaseRequest request = gson.fromJson(buffer.toString(), BaseRequest.class);
                 LOGGER.info("request=" + request);
-                KafkaProducerRecord<String, BaseRequest> record = KafkaProducerRecord.create("topic123", request);
 
+                KafkaProducerRecord<String, BaseRequest> record = KafkaProducerRecord.create("topic123", request);
                 producer.write(record, done -> {
                         System.out.println("Message " + record.value()+ done.toString());
 
                 });
 
-                JsonObject o = new JsonObject();
-                o.put("key","test this is");
-                responseHandler.accept(o.encode());
-
                 /*
+                CustomMessage clusterWideMessage = new CustomMessage(200, "a00000001", "Message sent from publisher!");
+
                 eventBus.send(config().getString("eventbus.spark"), clusterWideMessage, reply -> {
                     if (reply.succeeded()) {
                         System.out.println("Received reply: ");
@@ -173,33 +175,82 @@ import rx.Observable;
                         System.out.println("No reply from cluster receiver");
                     }
                 });*/
-
+                JsonObject o = new JsonObject();
+                o.put("key","test this is");
+                responseHandler.accept(o.encode());
             }
         });
-
     }
 
     private void postRunUserClass(RoutingContext routingContext){
-        // Custom message
+        HttpServerResponse response = routingContext.response();
+        Consumer<Integer> errorHandler = i-> response.setStatusCode(i).end();
+        Consumer<String> responseHandler = s-> response.putHeader("content-type", "application/json").end(s);
+
         routingContext.request().bodyHandler(new Handler<Buffer>() {
             @Override
             public void handle(Buffer buffer) {
+                LOGGER.info("buffer=" + buffer.toString());
+                BaseRequest request = gson.fromJson(buffer.toString(), BaseRequest.class);
+                LOGGER.info("request=" + request);
 
-                CustomMessage clusterWideMessage = new CustomMessage(2, "", buffer.toString());
+                KafkaProducerRecord<String, BaseRequest> record = KafkaProducerRecord.create("topic123", request);
+                producer.write(record, done -> {
+                    System.out.println("Message " + record.value()+ done.toString());
 
-                /*eventBus.send(config().getString("eventbus.spark"), clusterWideMessage, reply -> {
+                });
+
+                /*
+                CustomMessage clusterWideMessage = new CustomMessage(200, "a00000001", "Message sent from publisher!");
+
+                eventBus.send(config().getString("eventbus.spark"), clusterWideMessage, reply -> {
                     if (reply.succeeded()) {
                         System.out.println("Received reply: ");
                     } else {
                         System.out.println("No reply from cluster receiver");
                     }
                 });*/
-
+                JsonObject o = new JsonObject();
+                o.put("key","test this is");
+                responseHandler.accept(o.encode());
             }
         });
     }
 
+    private void postRunQuery(RoutingContext routingContext){
+        HttpServerResponse response = routingContext.response();
+        Consumer<Integer> errorHandler = i-> response.setStatusCode(i).end();
+        Consumer<String> responseHandler = s-> response.putHeader("content-type", "application/json").end(s);
 
+        routingContext.request().bodyHandler(new Handler<Buffer>() {
+            @Override
+            public void handle(Buffer buffer) {
+                LOGGER.info("buffer=" + buffer.toString());
+                BaseRequest request = gson.fromJson(buffer.toString(), BaseRequest.class);
+                LOGGER.info("request=" + request);
+
+                KafkaProducerRecord<String, BaseRequest> record = KafkaProducerRecord.create("topic123", request);
+                producer.write(record, done -> {
+                    System.out.println("Message " + record.value()+ done.toString());
+
+                });
+
+                /*
+                CustomMessage clusterWideMessage = new CustomMessage(200, "a00000001", "Message sent from publisher!");
+
+                eventBus.send(config().getString("eventbus.spark"), clusterWideMessage, reply -> {
+                    if (reply.succeeded()) {
+                        System.out.println("Received reply: ");
+                    } else {
+                        System.out.println("No reply from cluster receiver");
+                    }
+                });*/
+                JsonObject o = new JsonObject();
+                o.put("key","test this is");
+                responseHandler.accept(o.encode());
+            }
+        });
+    }
     private void getListHierarchy(RoutingContext routingContext){
     HttpServerResponse response = routingContext.response();
     Consumer<Integer> errorHandler = i-> response.setStatusCode(i).end();

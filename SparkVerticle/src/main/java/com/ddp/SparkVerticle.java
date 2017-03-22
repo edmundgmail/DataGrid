@@ -2,50 +2,36 @@ package com.ddp;
 
 import com.ddp.access.*;
 import com.ddp.cpybook.CopybookIngestion;
-import com.ddp.util.CustomMessage;
+import com.ddp.userclass.Query;
 import com.ddp.util.*;
-import com.ddp.util.Runner;
+import com.ddp.utils.Utils;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.sun.jersey.api.json.JSONConfiguration;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
+import io.vertx.core.VertxOptions;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.kafka.client.producer.KafkaProducerRecord;
-import org.apache.avro.JsonProperties;
-import org.apache.commons.configuration.Configuration;
-import org.apache.commons.configuration.PropertiesConfiguration;
-import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder;
-import org.apache.commons.configuration2.builder.fluent.Parameters;
 import org.apache.kafka.clients.consumer.*;
-import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.spark.SparkConf;
-import org.apache.spark.api.java.function.PairFunction;
 import org.apache.spark.sql.SparkSession;
-import org.apache.spark.streaming.*;
 
 
-import java.util.*;
+import java.io.File;
+import java.lang.reflect.Method;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.util.ArrayList;
 import java.util.Properties;
 
-import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.apache.spark.streaming.Durations;
-import org.apache.spark.streaming.StreamingContext;
-import org.apache.spark.streaming.api.java.JavaInputDStream;
-import org.apache.spark.streaming.api.java.JavaStreamingContext;
-
-import org.parboiled.common.Tuple2;
-import org.apache.commons.beanutils.PropertyUtils;
-import scala.collection.JavaConversions;
-
+import static com.ddp.util.ClassUtils.findClass;
 
 /**
  * Created by cloudera on 2/8/17.
@@ -54,21 +40,115 @@ public class SparkVerticle extends AbstractVerticle{
 
     private Logger LOG = LoggerFactory.getLogger("SparkVerticle");
 
-    private SparkSession spark;
-
     private Gson gson = new Gson();
     private io.vertx.kafka.client.consumer.KafkaConsumer<String, BaseRequest> consumer;
     private io.vertx.kafka.client.producer.KafkaProducer<String, BaseRequest> producer;
     private SparkConf conf;
-
+    private static File outputDir;
 
     private UserParameterDeserializer userParameterDeserializer;
+    private static Object sparkSession;    // spark 2.x
+
+    /*
     private Object createSparkSession() {
+        conf = new SparkConf().setMaster(config().getString("spark.master")).setAppName(config().getString("spark.appname"));
+
+        System.setProperty("hive.metastore.uris", "thrift://quickstart.cloudera:9083");
+        System.setProperty("hive.metastore.warehouse.dir", "hdfs:/user/hive/warehouse");
+        System.setProperty("hive.metastore.execute.setugi", "true");
 
         SparkSession sparkSession = SparkSession
                 .builder()
                 .config(conf)
+                .enableHiveSupport()
                 .getOrCreate();
+
+        return sparkSession;
+    }*/
+
+    private boolean hiveClassesArePresent() {
+        try {
+            this.getClass().forName("org.apache.spark.sql.hive.HiveSessionState");
+            this.getClass().forName("org.apache.hadoop.hive.conf.HiveConf");
+            return true;
+        } catch (ClassNotFoundException | NoClassDefFoundError e) {
+            return false;
+        }
+    }
+
+    private Object createSparkSession() {
+        outputDir = null;//new File(Utils.getTempPath());
+
+        //System.setProperty("hive.metastore.uris", "thrift://quickstart.cloudera:9083");
+        //System.setProperty("hive.metastore.warehouse.dir", "hdfs:/user/hive/warehouse");
+        //System.setProperty("hive.metastore.execute.setugi", "true");
+
+        //SPARK_EXECUTOR_URI,SPARK_HOME
+
+        conf = new SparkConf();
+        //loadClass(spark,"/usr/lib/hive/lib/hive-contrib.jar");
+        //String [] jars = {"/usr/lib/hive/lib/hive-contrib.jar"};
+        //conf.setJars(jars);
+        LOG.info("------ Create new SparkContext {} -------", config().getString("spark.master"));
+        String execUri = System.getenv("SPARK_EXECUTOR_URI");
+        conf.setAppName(config().getString("spark.appname"));
+
+        if (outputDir != null) {
+            conf.set("spark.repl.class.outputDir", outputDir.getAbsolutePath());
+        }
+
+        if (execUri != null) {
+            conf.set("spark.executor.uri", execUri);
+        }
+
+        if (System.getenv("SPARK_HOME") != null) {
+            conf.setSparkHome(System.getenv("SPARK_HOME"));
+        }
+
+        conf.set("spark.scheduler.mode", "FAIR");
+        conf.setMaster(config().getString("spark.master"));
+
+        boolean isYarnMode = false;
+        if (isYarnMode) {
+            conf.set("master", "yarn");
+            conf.set("spark.submit.deployMode", "client");
+        }
+
+        /*Properties intpProperty = getProperty();
+
+        for (Object k : intpProperty.keySet()) {
+            String key = (String) k;
+            String val = toString(intpProperty.get(key));
+            if (key.startsWith("spark.") && !val.trim().isEmpty()) {
+                logger.debug(String.format("SparkConf: key = [%s], value = [%s]", key, val));
+                conf.set(key, val);
+            }
+        }
+
+        setupConfForPySpark(conf);
+        setupConfForSparkR(conf);
+        */
+        Class SparkSession = ClassUtils.findClass("org.apache.spark.sql.SparkSession");
+        Object builder = ClassUtils.invokeStaticMethod(SparkSession, "builder");
+        ClassUtils.invokeMethod(builder, "config", new Class[]{ SparkConf.class }, new Object[]{ conf });
+
+        boolean useHiveContext = true;
+        if (useHiveContext) {
+            if (hiveClassesArePresent()) {
+                ClassUtils.invokeMethod(builder, "enableHiveSupport");
+                sparkSession = ClassUtils.invokeMethod(builder, "getOrCreate");
+                LOG.info("Created Spark session with Hive support");
+            } else {
+                ClassUtils.invokeMethod(builder, "config",
+                        new Class[]{ String.class, String.class},
+                        new Object[]{ "spark.sql.catalogImplementation", "in-memory"});
+                sparkSession = ClassUtils.invokeMethod(builder, "getOrCreate");
+                LOG.info("Created Spark session with Hive support use in-memory catalogImplementation");
+            }
+        } else {
+            sparkSession = ClassUtils.invokeMethod(builder, "getOrCreate");
+            LOG.info("Created Spark session");
+        }
 
         return sparkSession;
     }
@@ -103,35 +183,54 @@ public class SparkVerticle extends AbstractVerticle{
         return producer;
     }
 
-    public static void main(String argv[]){
-        Vertx vertx = Vertx.vertx();
-        final JsonObject js = new JsonObject();
-        vertx.fileSystem().readFile("app-conf.json", result -> {
-            if (result.succeeded()) {
-                Buffer buff = result.result();
-                js.mergeIn(new JsonObject(buff.toString()));
-                DeploymentOptions options = new DeploymentOptions().setConfig(js).setMaxWorkerExecuteTime(5000).setWorker(true).setWorkerPoolSize(30);
-                vertx.deployVerticle(SparkVerticle.class.getName(), options);
-            } else {
-                System.err.println("Oh oh ..." + result.cause());
+    public static void main(String argv[]) {
+        //DeploymentOptions deploymentOptions = new DeploymentOptions().setConfig(js).setMaxWorkerExecuteTime(5000).setWorker(true).setWorkerPoolSize(30);
+
+        VertxOptions options = new VertxOptions().setBlockedThreadCheckInterval(200000000);
+        options.setClustered(true);
+
+        Vertx.clusteredVertx(options, res -> {
+            if (res.succeeded()) {
+                Vertx vertx = res.result();
+                final JsonObject js = new JsonObject();
+                vertx.fileSystem().readFile("app-conf.json", result -> {
+                    if (result.succeeded()) {
+                        Buffer buff = result.result();
+                        js.mergeIn(new JsonObject(buff.toString()));
+                        DeploymentOptions deploymentOptions = new DeploymentOptions().setConfig(js).setMaxWorkerExecuteTime(5000).setWorker(true).setWorkerPoolSize(5);
+                        vertx.deployVerticle(SparkVerticle.class.getName(), deploymentOptions);
+                    } else {
+                        System.err.println("Oh oh ..." + result.cause());
+                    }
+                });
+
             }
         });
-
     }
 
     public void start() {
-        UserParameterDeserializer userParameterDeserializer = new UserParameterDeserializer();
 
-        userParameterDeserializer.registerDataType(CopybookIngestionParameter.class.getName(), CopybookIngestionParameter.class);
-        userParameterDeserializer.registerDataType(JarParamter.class.getName(), JarParamter.class);
-        userParameterDeserializer.registerDataType(ScalaSourceParameter.class.getName(), ScalaSourceParameter.class);
+
+        UserParameterDeserializer userParameterDeserializer = UserParameterDeserializer.getInstance();
 
         Gson gson = new GsonBuilder().registerTypeAdapter(UserParameter.class, userParameterDeserializer).create();
-        conf = new SparkConf().setMaster(config().getString("spark.master")).setAppName(config().getString("spark.appname"));
-        spark = (SparkSession) createSparkSession();
+        createSparkSession();
 
         //JavaStreamingContext streamingContext = new JavaStreamingContext(conf, Durations.seconds(1));
 
+        //EventBus eventBus = getVertx().eventBus();
+        //eventBus.registerDefaultCodec(CustomMessage.class, new CustomMessageCodec());
+
+        // Receive message
+        /*eventBus.consumer("eventbus.spark", message -> {
+            CustomMessage customMessage = (CustomMessage) message.body();
+
+            System.out.println("Custom message received: "+customMessage.getSummary());
+
+            // Replying is same as publishing
+            CustomMessage replyMessage = new CustomMessage(200, "a00000002", "Message sent from cluster receiver!");
+            message.reply(replyMessage);
+        });*/
 
         consumer = createConsumerJava(vertx);
         producer = createProducerJava(vertx);
@@ -161,7 +260,27 @@ public class SparkVerticle extends AbstractVerticle{
 
     }
 
+    private void loadClass(SparkSession spark, String path){
+        try {
+            File file = new File(path);
+            URL url = file.toURI().toURL();
+
+            URLClassLoader classLoader = (URLClassLoader)spark.getClass().getClassLoader();
+
+            Method method = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
+            method.setAccessible(true);
+            method.invoke(classLoader, url);
+
+            spark.getClass().forName("org.apache.hadoop.hive.contrib.serde2.RegexSerDe");
+
+        } catch (Exception ex) {
+            LOG.error(ex.getMessage());
+            ex.printStackTrace();
+        }
+    }
+
     private void handleEvent(BaseRequest msg) {
+        SparkSession spark = (SparkSession) sparkSession;
 
         if (msg.parameter().className().equals(CopybookIngestionParameter.class.getCanonicalName())) {
             CopybookIngestionParameter a = (CopybookIngestionParameter) msg.parameter();
@@ -186,6 +305,29 @@ public class SparkVerticle extends AbstractVerticle{
                     System.out.println("The result is: " + res.result());
                 });
          }
+        else if(msg.parameter().className().equals(QueryParameter.class.getCanonicalName())){
 
+            //loadClass(spark,"/usr/lib/hive/lib/hive-contrib.jar");
+            try{
+                spark.getClass().forName("org.apache.hadoop.hive.contrib.serde2.RegexSerDe");
+            }
+            catch(Exception e)
+            {
+                LOG.error(e.getMessage());
+                e.printStackTrace();
+            }
+
+            QueryParameter a = (QueryParameter)msg.parameter();
+
+
+            vertx.executeBlocking(future -> {
+                // Call some blocking API that takes a significant amount of time to return
+                //Object result = RunUserClass.apply(jclFactory, jcl, sqlContext, a).run();
+                //future.complete(result);
+                Query.apply(spark, a).query();
+            }, res -> {
+                System.out.println("The result is: " + res.result());
+            });
+        }
     }
 }

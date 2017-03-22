@@ -1,6 +1,6 @@
 package com.ddp.util;
 
-import com.ddp.access.UserParameter;
+import com.ddp.access.*;
 import com.google.gson.*;
 
 import java.lang.reflect.Type;
@@ -13,6 +13,19 @@ import java.util.Map;
 public class UserParameterDeserializer implements JsonDeserializer<UserParameter>
 {
     static Map<String, Class<? extends UserParameter>> dataTypeRegistry = new HashMap<String, Class<? extends UserParameter>>();
+    private UserParameterDeserializer(){
+
+    }
+
+    public static UserParameterDeserializer getInstance(){
+        UserParameterDeserializer instance = new UserParameterDeserializer();
+        instance.registerDataType(CopybookIngestionParameter.class.getName(), CopybookIngestionParameter.class);
+        instance.registerDataType(JarParamter.class.getName(), JarParamter.class);
+        instance.registerDataType(ScalaSourceParameter.class.getName(), ScalaSourceParameter.class);
+        instance.registerDataType(QueryParameter.class.getName(), QueryParameter.class);
+
+        return instance;
+    }
 
     public void registerDataType(String clasName, Class<? extends UserParameter> javaType)
     {
