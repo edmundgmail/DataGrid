@@ -20,6 +20,7 @@ import com.codahale.metrics.MetricRegistryListener;
 import com.ddp.access.*;
 import com.ddp.hierarchy.DataBrowse;
 import com.ddp.hierarchy.IDataBrowse;
+import com.ddp.utils.Utils;
 import com.google.common.base.Strings;
 
 import com.google.gson.Gson;
@@ -36,13 +37,18 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.jdbc.JDBCClient;
+import io.vertx.ext.web.FileUpload;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.*;
 import java.util.function.Consumer;
 
 import com.ddp.util.*;
+import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.CorsHandler;
 import io.vertx.kafka.client.consumer.KafkaConsumer;
 import io.vertx.kafka.client.producer.KafkaProducer;
@@ -51,20 +57,21 @@ import io.vertx.kafka.client.producer.KafkaWriteStream;
 import io.vertx.kafka.client.producer.RecordMetadata;
 import io.vertx.rxjava.kafka.client.consumer.KafkaConsumerRecord;
 import org.apache.commons.lang3.math.NumberUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import rx.Observable;
+import io.vertx.core.http.HttpServerRequest;
 
 /**
  * @author <a href="http://tfox.org">Tim Fox</a>
  */
  public class SimpleREST extends AbstractVerticle {
-
-  private Map<String, JsonObject> products = new HashMap<>();
-
   private IDataBrowse dataBrowse;
   private Logger LOGGER = LoggerFactory.getLogger("SimpleREST");
   private JDBCClient client;
@@ -72,7 +79,11 @@ import rx.Observable;
     private io.vertx.kafka.client.consumer.KafkaConsumer<String, BaseRequest> consumer;
 
     private UserParameterDeserializer userParameterDeserializer;
-  private Gson gson;
+    private Gson gson;
+    private FileSystem fs;
+    static private String hdfsUploadHome;
+    static private String localUploadHome;
+
     //private EventBus eventBus;
  // public static void main(String argv[]){
         //Runner.runExample(SimpleREST.class);
@@ -119,11 +130,12 @@ import rx.Observable;
               );
       //router.route().handler(BodyHandler.create());
       router.get("/hierarchy").handler(this::getListHierarchy);
+      router.post("/runner").handler(this::postSparkRunner);
 
-      router.post("/ingestion").handler(this::postIngestion);
+      router.post("/postJars").handler(BodyHandler.create()
+              .setUploadsDirectory(localUploadHome));
+      router.post("/postJars").handler(this::postJars);
 
-      router.post("/runUserClass").handler(this::postRunUserClass);
-      router.post("/runQuery").handler(this::postRunQuery);
       //router.route("/*").handler(StaticHandler.create());
       //eventBus = getVertx().eventBus();
       //eventBus.registerDefaultCodec(CustomMessage.class, new CustomMessageCodec());
@@ -143,9 +155,42 @@ import rx.Observable;
 
     }
 
+    private void postJars(RoutingContext ctx){
+            // in your example you only handle 1 file upload, here you can handle
+            // any number of uploads
+            List<String> jars = new ArrayList<>();
+            for (FileUpload f : ctx.fileUploads()) {
+                // do whatever you need to do with the file (it is already saved
+                // on the directory you wanted...
+
+                try{
+                    Path p = new Path(f.uploadedFileName());
+                    fs.copyFromLocalFile(p, new Path(hdfsUploadHome));
+                    jars.add(hdfsUploadHome + "/" + p.getName());
+                }
+                catch (IOException e)
+                {
+                    e.printStackTrace();
+                }
+            }
+
+            JarParamter jarParamter = JarParamter.apply(JarParamter.class.getCanonicalName(), String.join(":", jars));
+
+            Random random = new Random();
+            Integer sessionKey = random.nextInt(10000);
+            BaseRequest request = BaseRequest.apply(sessionKey, jarParamter);
+
+            LOGGER.info("request=" + request);
+
+            KafkaProducerRecord<String, BaseRequest> record = KafkaProducerRecord.create("topic123", request);
+            producer.write(record, done -> {
+                System.out.println("Message " + record.value()+ done.toString());
+                ctx.response().end();
+            });
+    }
 
 
-    private void postIngestion(RoutingContext routingContext){
+    private void postSparkRunner(RoutingContext routingContext){
         // Custom message
 
         HttpServerResponse response = routingContext.response();
@@ -165,16 +210,6 @@ import rx.Observable;
 
                 });
 
-                /*
-                CustomMessage clusterWideMessage = new CustomMessage(200, "a00000001", "Message sent from publisher!");
-
-                eventBus.send(config().getString("eventbus.spark"), clusterWideMessage, reply -> {
-                    if (reply.succeeded()) {
-                        System.out.println("Received reply: ");
-                    } else {
-                        System.out.println("No reply from cluster receiver");
-                    }
-                });*/
                 JsonObject o = new JsonObject();
                 o.put("key","test this is");
                 responseHandler.accept(o.encode());
@@ -182,75 +217,6 @@ import rx.Observable;
         });
     }
 
-    private void postRunUserClass(RoutingContext routingContext){
-        HttpServerResponse response = routingContext.response();
-        Consumer<Integer> errorHandler = i-> response.setStatusCode(i).end();
-        Consumer<String> responseHandler = s-> response.putHeader("content-type", "application/json").end(s);
-
-        routingContext.request().bodyHandler(new Handler<Buffer>() {
-            @Override
-            public void handle(Buffer buffer) {
-                LOGGER.info("buffer=" + buffer.toString());
-                BaseRequest request = gson.fromJson(buffer.toString(), BaseRequest.class);
-                LOGGER.info("request=" + request);
-
-                KafkaProducerRecord<String, BaseRequest> record = KafkaProducerRecord.create("topic123", request);
-                producer.write(record, done -> {
-                    System.out.println("Message " + record.value()+ done.toString());
-
-                });
-
-                /*
-                CustomMessage clusterWideMessage = new CustomMessage(200, "a00000001", "Message sent from publisher!");
-
-                eventBus.send(config().getString("eventbus.spark"), clusterWideMessage, reply -> {
-                    if (reply.succeeded()) {
-                        System.out.println("Received reply: ");
-                    } else {
-                        System.out.println("No reply from cluster receiver");
-                    }
-                });*/
-                JsonObject o = new JsonObject();
-                o.put("key","test this is");
-                responseHandler.accept(o.encode());
-            }
-        });
-    }
-
-    private void postRunQuery(RoutingContext routingContext){
-        HttpServerResponse response = routingContext.response();
-        Consumer<Integer> errorHandler = i-> response.setStatusCode(i).end();
-        Consumer<String> responseHandler = s-> response.putHeader("content-type", "application/json").end(s);
-
-        routingContext.request().bodyHandler(new Handler<Buffer>() {
-            @Override
-            public void handle(Buffer buffer) {
-                LOGGER.info("buffer=" + buffer.toString());
-                BaseRequest request = gson.fromJson(buffer.toString(), BaseRequest.class);
-                LOGGER.info("request=" + request);
-
-                KafkaProducerRecord<String, BaseRequest> record = KafkaProducerRecord.create("topic123", request);
-                producer.write(record, done -> {
-                    System.out.println("Message " + record.value()+ done.toString());
-
-                });
-
-                /*
-                CustomMessage clusterWideMessage = new CustomMessage(200, "a00000001", "Message sent from publisher!");
-
-                eventBus.send(config().getString("eventbus.spark"), clusterWideMessage, reply -> {
-                    if (reply.succeeded()) {
-                        System.out.println("Received reply: ");
-                    } else {
-                        System.out.println("No reply from cluster receiver");
-                    }
-                });*/
-                JsonObject o = new JsonObject();
-                o.put("key","test this is");
-                responseHandler.accept(o.encode());
-            }
-        });
-    }
     private void getListHierarchy(RoutingContext routingContext){
     HttpServerResponse response = routingContext.response();
     Consumer<Integer> errorHandler = i-> response.setStatusCode(i).end();
@@ -297,6 +263,7 @@ import rx.Observable;
 
 
     private void setUpInitialData() {
+     fs = Utils.getHdfs();
      final JDBCClient client = JDBCClient.createShared(vertx, new JsonObject()
              .put("url", "jdbc:mysql://localhost:3306/metadata_ddp?user=ddp&password=password")
              .put("driver_class", "com.mysql.jdbc.Driver")

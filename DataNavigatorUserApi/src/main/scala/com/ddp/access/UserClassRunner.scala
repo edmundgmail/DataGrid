@@ -7,7 +7,7 @@ trait UserParameter {
 
 case class BaseRequest(sessionKey : Long,  parameter: UserParameter)
 
-case class UserClassParameter(override val className:String, userClassName:String) extends UserParameter
+case class UserClassParameter(override val className:String, userClassName:String, useSpark : Boolean = false) extends UserParameter
 
 case class CopybookIngestionParameter(    //code 1
 																		 override  val className: String,
@@ -29,5 +29,5 @@ case class QueryParameter(override val className: String, sql:String) extends Us
 
 
 trait UserClassRunner{
-	def run () : Any 
+	def run () : Any
 }

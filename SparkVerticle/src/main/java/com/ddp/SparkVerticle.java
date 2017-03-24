@@ -2,7 +2,10 @@ package com.ddp;
 
 import com.ddp.access.*;
 import com.ddp.cpybook.CopybookIngestion;
+import com.ddp.jarmanager.JarLoader;
+import com.ddp.jarmanager.ScalaSourceCompiiler;
 import com.ddp.userclass.Query;
+import com.ddp.userclass.RunUserClass;
 import com.ddp.util.*;
 import com.ddp.utils.Utils;
 import com.google.gson.Gson;
@@ -32,22 +35,29 @@ import java.util.ArrayList;
 import java.util.Properties;
 
 import static com.ddp.util.ClassUtils.findClass;
+import org.xeustechnologies.jcl.JarClassLoader;
+import org.xeustechnologies.jcl.JclObjectFactory;
 
 /**
  * Created by cloudera on 2/8/17.
  */
+
 public class SparkVerticle extends AbstractVerticle{
 
-    private Logger LOG = LoggerFactory.getLogger("SparkVerticle");
+    private static Logger LOG = LoggerFactory.getLogger("SparkVerticle");
 
     private Gson gson = new Gson();
     private io.vertx.kafka.client.consumer.KafkaConsumer<String, BaseRequest> consumer;
     private io.vertx.kafka.client.producer.KafkaProducer<String, BaseRequest> producer;
-    private SparkConf conf;
     private static File outputDir;
 
     private UserParameterDeserializer userParameterDeserializer;
     private static Object sparkSession;    // spark 2.x
+    private static final JclObjectFactory jclFactory = JclObjectFactory.getInstance();
+    private static final JarClassLoader jcl =new JarClassLoader();
+
+    private static String sparkAppName;
+    private static String sparkMaster;
 
     /*
     private Object createSparkSession() {
@@ -66,17 +76,17 @@ public class SparkVerticle extends AbstractVerticle{
         return sparkSession;
     }*/
 
-    private boolean hiveClassesArePresent() {
+    private static  boolean hiveClassesArePresent() {
         try {
-            this.getClass().forName("org.apache.spark.sql.hive.HiveSessionState");
-            this.getClass().forName("org.apache.hadoop.hive.conf.HiveConf");
+            SparkVerticle.class.forName("org.apache.spark.sql.hive.HiveSessionState");
+            SparkVerticle.class.forName("org.apache.hadoop.hive.conf.HiveConf");
             return true;
         } catch (ClassNotFoundException | NoClassDefFoundError e) {
             return false;
         }
     }
 
-    private Object createSparkSession() {
+    private static Object createSparkSession() {
         outputDir = null;//new File(Utils.getTempPath());
 
         //System.setProperty("hive.metastore.uris", "thrift://quickstart.cloudera:9083");
@@ -85,13 +95,13 @@ public class SparkVerticle extends AbstractVerticle{
 
         //SPARK_EXECUTOR_URI,SPARK_HOME
 
-        conf = new SparkConf();
+        SparkConf conf = new SparkConf();
         //loadClass(spark,"/usr/lib/hive/lib/hive-contrib.jar");
         //String [] jars = {"/usr/lib/hive/lib/hive-contrib.jar"};
         //conf.setJars(jars);
-        LOG.info("------ Create new SparkContext {} -------", config().getString("spark.master"));
+        LOG.info("------ Create new SparkContext {} -------", sparkMaster);
         String execUri = System.getenv("SPARK_EXECUTOR_URI");
-        conf.setAppName(config().getString("spark.appname"));
+        conf.setAppName(sparkAppName);
 
         if (outputDir != null) {
             conf.set("spark.repl.class.outputDir", outputDir.getAbsolutePath());
@@ -106,7 +116,7 @@ public class SparkVerticle extends AbstractVerticle{
         }
 
         conf.set("spark.scheduler.mode", "FAIR");
-        conf.setMaster(config().getString("spark.master"));
+        conf.setMaster(sparkMaster);
 
         boolean isYarnMode = false;
         if (isYarnMode) {
@@ -197,6 +207,9 @@ public class SparkVerticle extends AbstractVerticle{
                     if (result.succeeded()) {
                         Buffer buff = result.result();
                         js.mergeIn(new JsonObject(buff.toString()));
+                        sparkAppName = js.getString("spark.appname");
+                        sparkMaster = js.getString("spark.master");
+
                         DeploymentOptions deploymentOptions = new DeploymentOptions().setConfig(js).setMaxWorkerExecuteTime(5000).setWorker(true).setWorkerPoolSize(5);
                         vertx.deployVerticle(SparkVerticle.class.getName(), deploymentOptions);
                     } else {
@@ -208,29 +221,16 @@ public class SparkVerticle extends AbstractVerticle{
         });
     }
 
-    public void start() {
+    public static SparkSession getSparkSession(){
+        return (SparkSession) sparkSession;
+    }
 
+    public void start() {
 
         UserParameterDeserializer userParameterDeserializer = UserParameterDeserializer.getInstance();
 
         Gson gson = new GsonBuilder().registerTypeAdapter(UserParameter.class, userParameterDeserializer).create();
         createSparkSession();
-
-        //JavaStreamingContext streamingContext = new JavaStreamingContext(conf, Durations.seconds(1));
-
-        //EventBus eventBus = getVertx().eventBus();
-        //eventBus.registerDefaultCodec(CustomMessage.class, new CustomMessageCodec());
-
-        // Receive message
-        /*eventBus.consumer("eventbus.spark", message -> {
-            CustomMessage customMessage = (CustomMessage) message.body();
-
-            System.out.println("Custom message received: "+customMessage.getSummary());
-
-            // Replying is same as publishing
-            CustomMessage replyMessage = new CustomMessage(200, "a00000002", "Message sent from cluster receiver!");
-            message.reply(replyMessage);
-        });*/
 
         consumer = createConsumerJava(vertx);
         producer = createProducerJava(vertx);
@@ -287,7 +287,30 @@ public class SparkVerticle extends AbstractVerticle{
 
             vertx.executeBlocking(future -> {
                 // Call some blocking API that takes a significant amount of time to return
-                Object result = CopybookIngestion.apply(config().getString("hdfs.conf"), spark.sqlContext(), a).run();
+                Object result = CopybookIngestion.apply(spark.sqlContext(), a).run();
+                future.complete(result);
+            }, res -> {
+                System.out.println("The result is: " + res.result());
+            });
+        }
+        else if(msg.parameter().className().equals(ScalaSourceParameter.class.getCanonicalName())){
+            ScalaSourceParameter a = (ScalaSourceParameter)msg.parameter();
+
+            vertx.executeBlocking(future -> {
+                // Call some blocking API that takes a significant amount of time to return
+                Object result = ScalaSourceCompiiler.apply(jclFactory, jcl, a).run();
+                future.complete(result);
+            }, res -> {
+                System.out.println("The result is: " + res.result());
+            });
+
+        }
+        else if(msg.parameter().className().equals(JarParamter.class.getCanonicalName())){
+            JarParamter a = (JarParamter)msg.parameter();
+
+            vertx.executeBlocking(future -> {
+                // Call some blocking API that takes a significant amount of time to return
+                Object result = JarLoader.apply(jclFactory, jcl, a);
                 future.complete(result);
             }, res -> {
                 System.out.println("The result is: " + res.result());
@@ -299,7 +322,11 @@ public class SparkVerticle extends AbstractVerticle{
 
                 vertx.executeBlocking(future -> {
                     // Call some blocking API that takes a significant amount of time to return
-                    //Object result = RunUserClass.apply(jclFactory, jcl, sqlContext, a).run();
+                    if(!a.useSpark())
+                        RunUserClass.apply(jclFactory, jcl, spark, a).run();
+                    else
+                        RunUserClass.apply(jclFactory, jcl, spark, a).runSpark();
+
                     //future.complete(result);
                 }, res -> {
                     System.out.println("The result is: " + res.result());
@@ -308,15 +335,6 @@ public class SparkVerticle extends AbstractVerticle{
         else if(msg.parameter().className().equals(QueryParameter.class.getCanonicalName())){
 
             //loadClass(spark,"/usr/lib/hive/lib/hive-contrib.jar");
-            try{
-                spark.getClass().forName("org.apache.hadoop.hive.contrib.serde2.RegexSerDe");
-            }
-            catch(Exception e)
-            {
-                LOG.error(e.getMessage());
-                e.printStackTrace();
-            }
-
             QueryParameter a = (QueryParameter)msg.parameter();
 
 
@@ -324,7 +342,7 @@ public class SparkVerticle extends AbstractVerticle{
                 // Call some blocking API that takes a significant amount of time to return
                 //Object result = RunUserClass.apply(jclFactory, jcl, sqlContext, a).run();
                 //future.complete(result);
-                Query.apply(spark, a).query();
+                Query.apply(spark).query(a.sql());
             }, res -> {
                 System.out.println("The result is: " + res.result());
             });

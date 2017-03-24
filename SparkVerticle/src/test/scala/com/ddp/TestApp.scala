@@ -1,10 +1,5 @@
 package com.ddp
 
-import kafka.serializer.StringDecoder
-import org.apache.kafka.clients.consumer.ConsumerRecord
-import org.apache.kafka.common.serialization.StringDeserializer
-import org.apache.spark.SparkConf
-import org.apache.spark.streaming.{Seconds, StreamingContext}
 import org.apache.spark.deploy.SparkSubmit
 
 import scala.collection.mutable.{ArrayBuffer, HashMap}

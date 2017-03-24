@@ -7,12 +7,12 @@ import org.apache.spark.sql.{SQLContext, SparkSession}
 /**
   * Created by cloudera on 3/20/17.
   */
-case class Query(sqlContext:SparkSession, param : QueryParameter){
+case class Query(sqlContext:SparkSession){
 
-  def query : Any = {
+  def query(sql:String) : Any = {
     val path = Utils.getTempPath()
       try {
-        sqlContext.sql(param.sql).write.json(path)
+        sqlContext.sql(sql).write.json(path)
 
       }
       catch

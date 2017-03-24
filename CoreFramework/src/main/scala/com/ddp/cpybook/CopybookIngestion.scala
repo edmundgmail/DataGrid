@@ -2,7 +2,7 @@ package com.ddp.cpybook
 
 import com.ddp.access.UserClassRunner
 import com.ddp.access.CopybookIngestionParameter
-
+import com.ddp.utils.Utils
 import org.apache.hadoop
 import org.apache.spark.SparkContext
 import org.apache.spark.sql.SQLContext
@@ -14,11 +14,10 @@ import org.apache.spark.sql.SQLContext
 
 
 
-  case class CopybookIngestion (hdfsConf: String, sqlContext : SQLContext, param: CopybookIngestionParameter) extends UserClassRunner{
+  case class CopybookIngestion (sqlContext : SQLContext, param: CopybookIngestionParameter) extends UserClassRunner{
 
     override def run() : Any = {
-      val conf = new hadoop.conf.Configuration
-      conf.set("fs.defaultFS", hdfsConf)
+      val conf = Utils.getHdfsConf
 
       conf.set(Constants.CopybookName, param.cpyBookName)
       conf.set(Constants.CopybookHdfsPath, param.cpyBookHdfsPath  )

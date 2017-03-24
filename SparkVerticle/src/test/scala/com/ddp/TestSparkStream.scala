@@ -1,7 +1,5 @@
 package com.ddp
 
-import kafka.serializer.StringDecoder
-import org.apache.spark.{SparkConf, _}
 import org.apache.spark.streaming._
 
 /**
