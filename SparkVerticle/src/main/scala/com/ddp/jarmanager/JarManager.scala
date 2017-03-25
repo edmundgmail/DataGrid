@@ -7,19 +7,36 @@ import com.ddp.utils.Utils
 import org.apache.hadoop
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.xeustechnologies.jcl.{JarClassLoader, JclObjectFactory}
+import scala.collection.JavaConversions._
+
 /**
   * Created by cloudera on 9/3/16.
   */
 
 
-case class JarLoader (jclFactory : JclObjectFactory, jcl: JarClassLoader, jarParamter: JarParamter) {
-
-  val pathArray = jarParamter.hdfsPaths.split(":")
+case class JarLoader (jclFactory : JclObjectFactory, jcl: JarClassLoader){
 
   val fs = Utils.getHdfs
-  for(p<-pathArray){
-    val inputStream = new BufferedInputStream (fs.open (new Path( p) ) )
-    jcl.add(inputStream)
+
+  def load(jarParamter: JarParamter) : Any= {
+    val pathArray = jarParamter.hdfsPaths.split(":")
+
+    for (p <- pathArray) {
+      val inputStream = new BufferedInputStream(fs.open(new Path(p)))
+      val clazzNames = JarEnumerator.getClazzNames(inputStream)
+
+      for(z<-clazzNames){
+        try{
+          jcl.unloadClass(z)
+        }
+        catch {
+          case e:Throwable =>e.printStackTrace
+        }
+
+      }
+      jcl.add(inputStream)
+    }
+    "load success"
   }
 }
 

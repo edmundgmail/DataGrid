@@ -41,4 +41,10 @@ Do a SparkSQL
 }
 
 
+to test postJars
+$curl -v -F upload=@PiJob.jar localhost:8082/postJars
+
+
+
+
 

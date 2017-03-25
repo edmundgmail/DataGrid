@@ -14,9 +14,9 @@ import org.apache.spark.sql.SQLContext
 
 
 
-  case class CopybookIngestion (sqlContext : SQLContext, param: CopybookIngestionParameter) extends UserClassRunner{
+  case class CopybookIngestion (sqlContext : SQLContext) {
 
-    override def run() : Any = {
+    def run (param: CopybookIngestionParameter) : Any = {
       val conf = Utils.getHdfsConf
 
       conf.set(Constants.CopybookName, param.cpyBookName)

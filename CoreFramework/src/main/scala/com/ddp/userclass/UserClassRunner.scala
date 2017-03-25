@@ -9,12 +9,12 @@ import org.xeustechnologies.jcl.{JarClassLoader, JclObjectFactory}
   */
 
 
-case class RunUserClass (jclFactory : JclObjectFactory, jcl: JarClassLoader , sqlContext: SparkSession, message: UserClassParameter){
-  def run : Any = {
+case class RunUserClass (jclFactory : JclObjectFactory, jcl: JarClassLoader ){
+  def run (message: UserClassParameter): Any = {
       jclFactory.create(jcl, message.userClassName).asInstanceOf[UserClassRunner].run()
   }
 
-  def runSpark: Any = {
+  def runSpark (sqlContext: SparkSession, message: UserClassParameter): Any = {
     val jc = new JobContext(sqlContext)
     jclFactory.create(jcl, message.userClassName).asInstanceOf[UserSparkClassRunner].run(jc)
   }

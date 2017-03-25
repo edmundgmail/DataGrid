@@ -75,22 +75,43 @@ import io.vertx.core.http.HttpServerRequest;
   private IDataBrowse dataBrowse;
   private Logger LOGGER = LoggerFactory.getLogger("SimpleREST");
   private JDBCClient client;
-  private KafkaProducer<String, BaseRequest> producer;
-    private io.vertx.kafka.client.consumer.KafkaConsumer<String, BaseRequest> consumer;
 
-    private UserParameterDeserializer userParameterDeserializer;
-    private Gson gson;
-    private FileSystem fs;
-    static private String hdfsUploadHome;
-    static private String localUploadHome;
+  private static KafkaProducer<String, BaseRequest> producer;
+  private static io.vertx.kafka.client.consumer.KafkaConsumer<String, BaseRequest> consumer;
+  private static String consumerTopic;
+  private static String producerTopic;
+  private static String kafkaBrokers;
+  private static String groupId;
+  private static String hdfsUploadHome;
+  private static String localUploadHome;
+    private static Integer httpPort;
+    private static String sqlDriverClass;
+    private static String sqlUrl;
+
+    private static UserParameterDeserializer userParameterDeserializer = UserParameterDeserializer.getInstance();
+    private static Gson gson = new GsonBuilder().registerTypeAdapter(UserParameter.class, userParameterDeserializer).create();
+
+    private static FileSystem fs = Utils.getHdfs();
 
     //private EventBus eventBus;
  // public static void main(String argv[]){
         //Runner.runExample(SimpleREST.class);
     //}
 
+    private static void initConfig(JsonObject js){
+        httpPort = js.getInteger("http.port");
+        sqlDriverClass = js.getString("driver.class");
+        sqlUrl = js.getString("sql.url");
+        consumerTopic = js.getString("in.topic");
+        producerTopic = js.getString("out.topic");
+        kafkaBrokers = js.getString("kafka.brokers");
+        groupId = js.getString("group.id");
+        localUploadHome =js.getString("local.upload.home");
+        hdfsUploadHome =js.getString("hdfs.upload.home");
+    }
 
-  public static void main(String argv[]){
+
+    public static void main(String argv[]){
 
       VertxOptions options = new VertxOptions().setBlockedThreadCheckInterval(200000000);
       options.setClustered(true);
@@ -103,6 +124,7 @@ import io.vertx.core.http.HttpServerRequest;
                   if (result.succeeded()) {
                       Buffer buff = result.result();
                       js.mergeIn(new JsonObject(buff.toString()));
+                      initConfig(js);
                       DeploymentOptions deploymentOptions = new DeploymentOptions().setConfig(js).setMaxWorkerExecuteTime(5000).setWorker(true).setWorkerPoolSize(5);
                       vertx.deployVerticle(SimpleREST.class.getName(), deploymentOptions);
                   } else {
@@ -136,43 +158,55 @@ import io.vertx.core.http.HttpServerRequest;
               .setUploadsDirectory(localUploadHome));
       router.post("/postJars").handler(this::postJars);
 
-      //router.route("/*").handler(StaticHandler.create());
-      //eventBus = getVertx().eventBus();
-      //eventBus.registerDefaultCodec(CustomMessage.class, new CustomMessageCodec());
+      router.post("/postScalaFiles").handler(BodyHandler.create()
+              .setUploadsDirectory(localUploadHome));
+      router.post("/postScalaFiles").handler(this::postScalaFiles);
 
-      vertx.createHttpServer().requestHandler(router::accept).listen(config().getInteger("http.port", 9001));
+      vertx.createHttpServer().requestHandler(router::accept).listen(httpPort);
+    }
 
-        /*consumer.handler( record -> {
-            System.out.println("Processing record=" + record.key() +  record.value());
+
+    private List<String>  getUploadedFiles(RoutingContext ctx){
+        // any number of uploads
+        List<String> files = new ArrayList<>();
+        for (FileUpload f : ctx.fileUploads()) {
+            // do whatever you need to do with the file (it is already saved
+            // on the directory you wanted...
+
+            try{
+                Path p = new Path(f.uploadedFileName());
+                fs.copyFromLocalFile(p, new Path(hdfsUploadHome));
+                files.add(hdfsUploadHome + "/" + p.getName());
+            }
+            catch (IOException e)
+            {
+                e.printStackTrace();
+            }
+        }
+        return files;
+
+    }
+
+    private void postScalaFiles(RoutingContext ctx){
+        List<String> files = getUploadedFiles(ctx);
+        ScalaSourceParameter scalaSourceParameter = ScalaSourceParameter.apply(ScalaSourceParameter.class.getCanonicalName(), String.join(":", files));
+        Random random = new Random();
+        Integer sessionKey = random.nextInt(10000);
+        BaseRequest request = BaseRequest.apply(sessionKey, scalaSourceParameter);
+
+        LOGGER.info("request=" + request);
+
+        KafkaProducerRecord<String, BaseRequest> record = KafkaProducerRecord.create(producerTopic, request);
+        producer.write(record, done -> {
+            System.out.println("Message " + record.value()+ done.toString());
+            ctx.response().end();
         });
-
-        consumer.subscribe("topic123");
-        */
-
-        userParameterDeserializer = UserParameterDeserializer.getInstance();
-        gson = new GsonBuilder().registerTypeAdapter(UserParameter.class, userParameterDeserializer).create();
-
-
     }
 
     private void postJars(RoutingContext ctx){
             // in your example you only handle 1 file upload, here you can handle
             // any number of uploads
-            List<String> jars = new ArrayList<>();
-            for (FileUpload f : ctx.fileUploads()) {
-                // do whatever you need to do with the file (it is already saved
-                // on the directory you wanted...
-
-                try{
-                    Path p = new Path(f.uploadedFileName());
-                    fs.copyFromLocalFile(p, new Path(hdfsUploadHome));
-                    jars.add(hdfsUploadHome + "/" + p.getName());
-                }
-                catch (IOException e)
-                {
-                    e.printStackTrace();
-                }
-            }
+            List<String> jars = getUploadedFiles(ctx);
 
             JarParamter jarParamter = JarParamter.apply(JarParamter.class.getCanonicalName(), String.join(":", jars));
 
@@ -182,7 +216,7 @@ import io.vertx.core.http.HttpServerRequest;
 
             LOGGER.info("request=" + request);
 
-            KafkaProducerRecord<String, BaseRequest> record = KafkaProducerRecord.create("topic123", request);
+            KafkaProducerRecord<String, BaseRequest> record = KafkaProducerRecord.create(producerTopic, request);
             producer.write(record, done -> {
                 System.out.println("Message " + record.value()+ done.toString());
                 ctx.response().end();
@@ -204,7 +238,7 @@ import io.vertx.core.http.HttpServerRequest;
                 BaseRequest request = gson.fromJson(buffer.toString(), BaseRequest.class);
                 LOGGER.info("request=" + request);
 
-                KafkaProducerRecord<String, BaseRequest> record = KafkaProducerRecord.create("topic123", request);
+                KafkaProducerRecord<String, BaseRequest> record = KafkaProducerRecord.create(producerTopic, request);
                 producer.write(record, done -> {
                         System.out.println("Message " + record.value()+ done.toString());
 
@@ -231,14 +265,14 @@ import io.vertx.core.http.HttpServerRequest;
 
 }
 
-    private io.vertx.kafka.client.consumer.KafkaConsumer<String, BaseRequest> createConsumerJava(Vertx vertx) {
+    private static  io.vertx.kafka.client.consumer.KafkaConsumer<String, BaseRequest> createConsumerJava(Vertx vertx) {
 
         // creating the consumer using properties config
         Properties config = new Properties();
-        config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+        config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,kafkaBrokers);
         config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, BaseRequestDeserializer.class);
-        config.put(ConsumerConfig.GROUP_ID_CONFIG, "my_group4");
+        config.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
         config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         config.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
 
@@ -247,11 +281,11 @@ import io.vertx.core.http.HttpServerRequest;
         return consumer;
     }
 
-    private  KafkaProducer<String, BaseRequest> createProducerJava(Vertx vertx) {
+    private  static KafkaProducer<String, BaseRequest> createProducerJava(Vertx vertx) {
 
         // creating the producer using map and class types for key and value serializers/deserializers
         Properties config = new Properties();
-        config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+        config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,kafkaBrokers);
         config.put(ProducerConfig.ACKS_CONFIG, "1");
         config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, com.ddp.util.BaseRequestSerializer.class);
@@ -263,10 +297,9 @@ import io.vertx.core.http.HttpServerRequest;
 
 
     private void setUpInitialData() {
-     fs = Utils.getHdfs();
      final JDBCClient client = JDBCClient.createShared(vertx, new JsonObject()
-             .put("url", "jdbc:mysql://localhost:3306/metadata_ddp?user=ddp&password=password")
-             .put("driver_class", "com.mysql.jdbc.Driver")
+             .put("url", sqlUrl)
+             .put("driver_class", sqlDriverClass)
              .put("max_pool_size", 30));
 
      dataBrowse = new DataBrowse(client);
@@ -281,7 +314,7 @@ import io.vertx.core.http.HttpServerRequest;
                 e.printStackTrace();
             }
         });
-        consumer.subscribe("topic456");
+        consumer.subscribe(consumerTopic);
 
      //eventBus = getVertx().eventBus();
      //eventBus.registerDefaultCodec(CustomMessage.class, new CustomMessageCodec());

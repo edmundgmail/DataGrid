@@ -8,5 +8,5 @@ import org.apache.spark.sql.SparkSession
 case class JobContext(spark: SparkSession)
 
 trait UserSparkClassRunner {
-  def run ( context: JobContext ):Any
+  def run ( context: JobContext):Any
 }

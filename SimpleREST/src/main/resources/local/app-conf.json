@@ -1,21 +1,11 @@
 {
   "http.port": 8082,
-  "hdfs.conf": "hdfs://localhost:8020/",
-  "mysql.driver.class": "com.mysql.jdbc.Driver",
-  "mysql.url": "jdbc:mysql://localhost:3306/metadata_ddp?user=root&password=password",
+  "driver.class": "com.mysql.jdbc.Driver",
+  "sql.url": "jdbc:mysql://localhost:3306/metadata_ddp?user=root&password=password",
   "local.upload.home":"/tmp/upload",
   "hdfs.upload.home":"/user/cloudera/upload",
-  "eventbus.spark":"eventbus.spark",
-  "address":"ev-tst",
-  "groupId" : "1",
-  "kafkaTopic" : "topic123",
-  "zk" : "localhost:2181",
-  "offsetReset" : "largest",
-  "maxUnacknowledged" : 100,
-  "maxUncommitted" : 1000,
-  "ackTimeoutSeconds" : 600,
-  "maxRetries" : 100,
-  "initialRetryDelaySeconds" : 1,
-  "maxRetryDelaySeconds" : 10,
-  "eventBusSendTimeout" : 30
+  "kafka.brokers":"localhost:9092",
+  "out.topic":"topic.to.sparkVerticle",
+  "in.topic":"topic.to.restVerticle",
+  "group.id" : "group.rest"
 }
