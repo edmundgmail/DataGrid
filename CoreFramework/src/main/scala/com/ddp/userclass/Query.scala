@@ -10,7 +10,7 @@ import org.apache.spark.sql.{SQLContext, SparkSession}
 case class Query(sqlContext:SparkSession){
 
   def query(sql:String) : Any = {
-    val path = Utils.getTempPath()
+    val path = Utils.getTempPath
       try {
         sqlContext.sql(sql).write.json(path)
 
