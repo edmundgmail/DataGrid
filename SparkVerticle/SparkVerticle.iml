@@ -22,8 +22,6 @@
         <SOURCES />
       </library>
     </orderEntry>
-    <orderEntry type="library" name="Maven: com.cloudera.livy:livy-client-http:0.4.0-SNAPSHOT" level="project" />
-    <orderEntry type="library" name="Maven: com.cloudera.livy:livy-api:0.4.0-SNAPSHOT" level="project" />
     <orderEntry type="module" module-name="CoreFramework" />
     <orderEntry type="library" name="Maven: io.netty:netty-tcnative-boringssl-static:1.1.33.Fork17" level="project" />
     <orderEntry type="library" name="Maven: org.antlr:antlr4-runtime:4.6" level="project" />
@@ -60,6 +58,7 @@
     <orderEntry type="library" name="Maven: asm:asm-tree:3.3.1" level="project" />
     <orderEntry type="library" name="Maven: asm:asm-analysis:3.3.1" level="project" />
     <orderEntry type="module" module-name="DataNavigatorUserApi" />
+    <orderEntry type="library" name="Maven: org.apache.spark:spark-xml_2.11:0.4.1" level="project" />
     <orderEntry type="library" name="Maven: net.sf.JRecord:JRecord:0.81" level="project" />
     <orderEntry type="library" name="Maven: net.sf.cb2xml:cb2xml:0.95.8" level="project" />
     <orderEntry type="library" name="Maven: org.scala-lang:scala-library:2.11.6" level="project" />
