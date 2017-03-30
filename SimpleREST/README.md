@@ -10,6 +10,7 @@ Do a SparkSQL
     }
 }
 
+
 {
     sessionKey:"123",
     parameter: {
@@ -44,7 +45,13 @@ Do a SparkSQL
 to test postJars
 $curl -v -F upload=@PiJob.jar localhost:8082/postJars
 
-
-
-
-
+{
+    sessionKey:"123",
+    parameter: {
+      "className" : "com.ddp.access.FileIngestionParameter",
+      "format" : "csv",
+      "filePath":"hdfs://quickstart.cloudera:8020/tmp/cars.csv",
+      "tableName":"Cars",
+      "Schema" : "cif.Cars"
+    }
+}

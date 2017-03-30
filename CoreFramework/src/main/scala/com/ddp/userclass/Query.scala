@@ -10,14 +10,18 @@ import org.apache.spark.sql.{SQLContext, SparkSession}
 case class Query(sqlContext:SparkSession){
 
   def query(sql:String) : Any = {
-    val path = Utils.getTempPath()
+    val path = Utils.getTempPath
       try {
-        sqlContext.sql(sql).write.json(path)
-
+        val ret = sqlContext.sql(sql)
+        ret.show(100)
+        ret.write.json(path)
       }
       catch
         {
-          case _ :Throwable =>
+          case e :Throwable => {
+            e.printStackTrace
+            System.err.println(e.getMessage)
+          }
         }
 
       return path

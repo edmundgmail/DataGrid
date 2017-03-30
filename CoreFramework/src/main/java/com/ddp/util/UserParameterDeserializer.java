@@ -24,6 +24,7 @@ public class UserParameterDeserializer implements JsonDeserializer<UserParameter
         instance.registerDataType(ScalaSourceParameter.class.getName(), ScalaSourceParameter.class);
         instance.registerDataType(QueryParameter.class.getName(), QueryParameter.class);
         instance.registerDataType(UserClassParameter.class.getName(), UserClassParameter.class);
+        instance.registerDataType(FileIngestionParameter.class.getName(), FileIngestionParameter.class);
         return instance;
     }
 

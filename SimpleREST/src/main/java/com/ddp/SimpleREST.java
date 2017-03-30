@@ -217,6 +217,7 @@ import io.vertx.core.http.HttpServerRequest;
             LOGGER.info("request=" + request);
 
             KafkaProducerRecord<String, BaseRequest> record = KafkaProducerRecord.create(producerTopic, request);
+
             producer.write(record, done -> {
                 System.out.println("Message " + record.value()+ done.toString());
                 ctx.response().end();

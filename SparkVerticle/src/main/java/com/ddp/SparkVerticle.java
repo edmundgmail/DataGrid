@@ -2,6 +2,7 @@ package com.ddp;
 
 import com.ddp.access.*;
 import com.ddp.cpybook.CopybookIngestion;
+import com.ddp.ingestion.FileIngestionEngine;
 import com.ddp.jarmanager.JarLoader;
 import com.ddp.jarmanager.JarLoader$;
 import com.ddp.jarmanager.ScalaSourceCompiiler;
@@ -63,6 +64,8 @@ public class SparkVerticle extends AbstractVerticle{
     private static RunUserClass runUserClass;
     private static SparkSession sparkSession;
     private static Query queryEngine;
+    private static CopybookIngestion copybookIngestion;
+    private static FileIngestionEngine fileIngestionEngine;
 
     private static UserParameterDeserializer userParameterDeserializer = UserParameterDeserializer.getInstance();
     private static Gson gson = new GsonBuilder().registerTypeAdapter(UserParameter.class, userParameterDeserializer).create();
@@ -95,6 +98,8 @@ public class SparkVerticle extends AbstractVerticle{
         runUserClass = RunUserClass.apply(jclFactory, jcl);
         jarLoader = JarLoader.apply(jclFactory, jcl);
         scalaSourceCompiiler = ScalaSourceCompiiler.apply(jclFactory, jcl);
+        copybookIngestion = CopybookIngestion.apply(sparkSession.sqlContext());
+        fileIngestionEngine = FileIngestionEngine.apply(sparkSession.sqlContext());
     }
 
     private static Object createSparkSession() {
@@ -249,11 +254,23 @@ public class SparkVerticle extends AbstractVerticle{
 
             vertx.executeBlocking(future -> {
                 // Call some blocking API that takes a significant amount of time to return
-                Object result = CopybookIngestion.apply(spark.sqlContext()).run(a);
+                Object result = copybookIngestion.run(a);
                 future.complete(result);
             }, res -> {
                 System.out.println("The result is: " + res.result());
             });
+        }
+        else if(msg.parameter().className().equals(FileIngestionParameter.class.getCanonicalName())){
+            FileIngestionParameter a = (FileIngestionParameter)msg.parameter();
+
+            vertx.executeBlocking(future -> {
+                // Call some blocking API that takes a significant amount of time to return
+                Object result = fileIngestionEngine.run(a);
+                future.complete(result);
+            }, res -> {
+                System.out.println("The result is: " + res.result());
+            });
+
         }
         else if(msg.parameter().className().equals(ScalaSourceParameter.class.getCanonicalName())){
             ScalaSourceParameter a = (ScalaSourceParameter)msg.parameter();

@@ -9,6 +9,8 @@ case class BaseRequest(sessionKey : Long,  parameter: UserParameter)
 
 case class UserClassParameter(override val className:String, userClassName:String, useSpark : Boolean = false) extends UserParameter
 
+case class FileIngestionParameter( override  val className: String, format:String, filePath:String, tableName : String , Schema : String) extends UserParameter
+
 case class CopybookIngestionParameter(    //code 1
 																		 override  val className: String,
                                           conn:String,
