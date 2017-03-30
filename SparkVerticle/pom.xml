@@ -22,19 +22,6 @@
 
 
     <dependencies>
-        <dependency>
-            <groupId>com.cloudera.livy</groupId>
-            <artifactId>livy-client-http</artifactId>
-            <version>0.4.0-SNAPSHOT</version>
-        </dependency>
-
-        <!-- https://mvnrepository.com/artifact/com.cloudera.livy/livy-api -->
-        <dependency>
-            <groupId>com.cloudera.livy</groupId>
-            <artifactId>livy-api</artifactId>
-            <version>0.4.0-SNAPSHOT</version>
-        </dependency>
-
 
         <dependency>
             <groupId>com.ddp</groupId>
