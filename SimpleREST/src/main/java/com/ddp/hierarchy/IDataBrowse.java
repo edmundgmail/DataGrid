@@ -7,4 +7,5 @@ import java.util.function.Consumer;
  */
 public interface IDataBrowse {
     public void handleListHierarchy(Consumer<Integer> errHandler, Consumer<String> responseHandler, int pageNum, int pageSize, Long sourceID, Long entityID);
+    public String getEntityDetail(String entityName);
 }

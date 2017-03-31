@@ -230,7 +230,7 @@ public class SparkVerticle extends AbstractVerticle{
                 if(record.value()!=null && record.value().sessionKey()!=0 && record.value().parameter()!=null){
                     LOG.info(record.value());
                     handleEvent(record.value());
-                    BaseRequest request = new BaseRequest(456, null);
+                    BaseRequest request = new BaseRequest(456, null,false);
 
                     KafkaProducerRecord<String, BaseRequest> feedback = KafkaProducerRecord.create(producerTopic, request);
                     producer.write(feedback);

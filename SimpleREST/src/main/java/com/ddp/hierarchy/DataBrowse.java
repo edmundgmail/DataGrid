@@ -18,6 +18,16 @@ public class DataBrowse implements IDataBrowse{
 
     public DataBrowse(JDBCClient client){this.client=client;}
 
+    public String getEntityDetail(String entityName){
+        client.getConnection( res-> {
+            if(res.succeeded()){
+                res.result().queryWithParams("SELECT sname FROM datafield where entity_id=? LIMIT ?, ?", new JsonArray().add(entityName), query->{
+            });
+        }
+        });
+        return null;
+    }
+
     public void handleListHierarchy(Consumer<Integer> errorHandler, Consumer<String> responseHandler, int pageNum, int pageSize, Long sourceID, Long entityID) {
         client.getConnection( res-> {
             if(res.succeeded()){

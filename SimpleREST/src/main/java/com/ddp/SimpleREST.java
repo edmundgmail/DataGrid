@@ -192,7 +192,7 @@ import io.vertx.core.http.HttpServerRequest;
         ScalaSourceParameter scalaSourceParameter = ScalaSourceParameter.apply(ScalaSourceParameter.class.getCanonicalName(), String.join(":", files));
         Random random = new Random();
         Integer sessionKey = random.nextInt(10000);
-        BaseRequest request = BaseRequest.apply(sessionKey, scalaSourceParameter);
+        BaseRequest request = BaseRequest.apply(sessionKey, scalaSourceParameter,false);
 
         LOGGER.info("request=" + request);
 
@@ -212,7 +212,7 @@ import io.vertx.core.http.HttpServerRequest;
 
             Random random = new Random();
             Integer sessionKey = random.nextInt(10000);
-            BaseRequest request = BaseRequest.apply(sessionKey, jarParamter);
+            BaseRequest request = BaseRequest.apply(sessionKey, jarParamter,false);
 
             LOGGER.info("request=" + request);
 
@@ -224,6 +224,17 @@ import io.vertx.core.http.HttpServerRequest;
             });
     }
 
+    private void doPadding(BaseRequest request){
+        String className = request.parameter().className();
+
+        if(!request.needPadding())return;
+
+        if(className.equals(csvIngestionParameter.class.getCanonicalName()) ||
+                className.equals(xmlIngestionParameter.class.getCanonicalName()) ){
+            IngestionParameter parameter = (IngestionParameter) request.parameter();
+            parameter.updateSchema("s");
+        }
+    }
 
     private void postSparkRunner(RoutingContext routingContext){
         // Custom message
@@ -237,6 +248,8 @@ import io.vertx.core.http.HttpServerRequest;
             public void handle(Buffer buffer) {
                 LOGGER.info("buffer=" + buffer.toString());
                 BaseRequest request = gson.fromJson(buffer.toString(), BaseRequest.class);
+                doPadding(request);
+
                 LOGGER.info("request=" + request);
 
                 KafkaProducerRecord<String, BaseRequest> record = KafkaProducerRecord.create(producerTopic, request);

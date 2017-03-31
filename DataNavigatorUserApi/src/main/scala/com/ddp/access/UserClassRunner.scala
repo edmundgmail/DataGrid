@@ -2,15 +2,26 @@ package com.ddp.access
 
 
 trait UserParameter {
-	def className:String
+	val className:String
 }
 
-case class BaseRequest(sessionKey : Long,  parameter: UserParameter)
+case class BaseRequest(sessionKey : Long,  parameter: UserParameter, needPadding: Boolean = false)
 
 case class UserClassParameter(override val className:String, userClassName:String, useSpark : Boolean = false) extends UserParameter
 
-case class csvIngestionParameter( override  val className: String, filePath:String, tableName : String , Schema : String) extends UserParameter
-case class xmlIngestionParameter(override  val className: String, filePath:String, tableName : String , Schema : String, rowTag: String, rootTag:String) extends UserParameter
+trait IngestionParameter extends UserParameter{
+  val filePath:String
+  val tableName : String
+  var schema : String
+
+  def updateSchema(s:String): Unit ={
+    schema = s
+  }
+
+}
+
+case class csvIngestionParameter( override  val className: String,override  val  filePath:String, override  val tableName : String , override  var schema : String) extends IngestionParameter
+case class xmlIngestionParameter(override  val className: String, override  val  filePath:String, override  val tableName : String , override  var schema : String, rowTag: String, rootTag:String) extends IngestionParameter
 
 case class CopybookIngestionParameter(    //code 1
 																		 override  val className: String,

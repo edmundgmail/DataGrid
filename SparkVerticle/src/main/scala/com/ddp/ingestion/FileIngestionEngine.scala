@@ -15,7 +15,7 @@ case class FileIngestionEngine (sqlContext : SQLContext){
 
    def ingestXml(fileIngestionParameter: xmlIngestionParameter): Any ={
      val sql = "CREATE TABLE " + fileIngestionParameter.tableName + " USING com.databricks.spark.xml OPTIONS (path \"" + fileIngestionParameter.filePath +
-       /*"\", rootTag \"" + fileIngestionParameter.rootTag +*/
+       "\", rootTag \"" + fileIngestionParameter.rootTag +
        "\", rowTag \"" + fileIngestionParameter.rowTag +
        "\")"
       sqlContext.sql(sql)
