@@ -12,6 +12,7 @@ case class UserClassParameter(override val className:String, userClassName:Strin
 trait IngestionParameter extends UserParameter{
   val filePath:String
   val tableName : String
+	val templateTableName : String
   var schema : String
 
   def updateSchema(s:String): Unit ={
@@ -20,8 +21,8 @@ trait IngestionParameter extends UserParameter{
 
 }
 
-case class csvIngestionParameter( override  val className: String,override  val  filePath:String, override  val tableName : String , override  var schema : String) extends IngestionParameter
-case class xmlIngestionParameter(override  val className: String, override  val  filePath:String, override  val tableName : String , override  var schema : String, rowTag: String, rootTag:String) extends IngestionParameter
+case class csvIngestionParameter( override  val className: String,override  val  filePath:String, override  val tableName : String , override val templateTableName:String, override  var schema : String) extends IngestionParameter
+case class xmlIngestionParameter(override  val className: String, override  val  filePath:String, override  val tableName : String , override val templateTableName:String, override  var schema : String, rowTag: String, rootTag:String) extends IngestionParameter
 
 case class CopybookIngestionParameter(    //code 1
 																		 override  val className: String,

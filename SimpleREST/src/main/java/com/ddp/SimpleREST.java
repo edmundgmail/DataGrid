@@ -224,6 +224,12 @@ import io.vertx.core.http.HttpServerRequest;
             });
     }
 
+    private static void notifySpark(String s){
+
+
+
+    }
+
     private void doPadding(BaseRequest request){
         String className = request.parameter().className();
 
@@ -232,7 +238,7 @@ import io.vertx.core.http.HttpServerRequest;
         if(className.equals(csvIngestionParameter.class.getCanonicalName()) ||
                 className.equals(xmlIngestionParameter.class.getCanonicalName()) ){
             IngestionParameter parameter = (IngestionParameter) request.parameter();
-            parameter.updateSchema("s");
+            dataBrowse.getEntityDetail(parameter.templateTableName(), parameter, );
         }
     }
 

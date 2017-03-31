@@ -1,12 +1,17 @@
 package com.ddp.hierarchy;
 
+import com.ddp.access.IngestionParameter;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.jdbc.JDBCClient;
 import io.vertx.ext.sql.SQLConnection;
+import jodd.util.StringUtil;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.StringUtils;
 
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 /**
  * Created by cloudera on 1/24/17.
@@ -18,14 +23,28 @@ public class DataBrowse implements IDataBrowse{
 
     public DataBrowse(JDBCClient client){this.client=client;}
 
-    public String getEntityDetail(String entityName){
-        client.getConnection( res-> {
-            if(res.succeeded()){
-                res.result().queryWithParams("SELECT sname FROM datafield where entity_id=? LIMIT ?, ?", new JsonArray().add(entityName), query->{
-            });
+    public void getEntityDetail(String entityName, IngestionParameter p) {
+        if(StringUtils.isEmpty(entityName)){
+            return;
         }
+
+        String names[] = entityName.split("\\.");
+        if(names.length!=2) {
+            LOGGER.error("The entityName should be in sourceName.entityName format");
+            return;
+        }
+
+        client.getConnection(res -> {
+            if (res.succeeded()) {
+                res.result().queryWithParams("select f.sname from datafield f, dataentity e, datasource s where f.entity_id=e.entity_id and e.source_id=s.source_id and s.sname=? and e.sname=?;", new JsonArray().add(names[0]).add(names[1]), query -> {
+                    if (query.succeeded()) {
+                        String s = new JsonArray(query.result().getRows()).encode();
+                        LOGGER.info(s);
+                        p.updateSchema(s);
+                    }
+                });
+            }
         });
-        return null;
     }
 
     public void handleListHierarchy(Consumer<Integer> errorHandler, Consumer<String> responseHandler, int pageNum, int pageSize, Long sourceID, Long entityID) {
