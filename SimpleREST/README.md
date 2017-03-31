@@ -48,10 +48,19 @@ $curl -v -F upload=@PiJob.jar localhost:8082/postJars
 {
     sessionKey:"123",
     parameter: {
-      "className" : "com.ddp.access.FileIngestionParameter",
-      "format" : "csv",
+      "className" : "com.ddp.access.csvIngestionParameter",
       "filePath":"hdfs://quickstart.cloudera:8020/tmp/cars.csv",
       "tableName":"Cars",
+      "Schema" : "cif.Cars"
+    }
+}
+
+{
+    sessionKey:"123",
+    parameter: {
+      "className" : "com.ddp.access.xmlIngestionParameter",
+      "filePath":"hdfs://quickstart.cloudera:8020/tmp/books.xml",
+      "tableName":"Books",
       "Schema" : "cif.Cars"
     }
 }

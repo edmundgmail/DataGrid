@@ -1,6 +1,6 @@
 package com.ddp.ingestion
 
-import com.ddp.access.FileIngestionParameter
+import com.ddp.access.{csvIngestionParameter, xmlIngestionParameter}
 import org.apache.spark.sql.SQLContext
 
 /**
@@ -8,21 +8,16 @@ import org.apache.spark.sql.SQLContext
   */
 case class FileIngestionEngine (sqlContext : SQLContext){
 
-  def run(param: FileIngestionParameter): Any ={
-   param.format match{
-     case "csv" => csvIngestion(param)
-     case "xml"=>xmlIngestion(param)
-   }
-
-  }
-
-  private def csvIngestion(fileIngestionParameter: FileIngestionParameter): Any ={
+  def ingestCsv(fileIngestionParameter: csvIngestionParameter): Any ={
     val sql = "CREATE TABLE " + fileIngestionParameter.tableName + " USING com.databricks.spark.csv OPTIONS (path \"" + fileIngestionParameter.filePath + "\", header \"true\", inferSchema \"true\")"
     sqlContext.sql(sql)
   }
 
-   private def xmlIngestion(fileIngestionParameter: FileIngestionParameter): Any ={
-     val sql = "CREATE TABLE " + fileIngestionParameter.tableName + " USING com.databricks.spark.xml OPTIONS (path \"" + fileIngestionParameter.filePath + "\", header \"true\", inferSchema \"true\")"
+   def ingestXml(fileIngestionParameter: xmlIngestionParameter): Any ={
+     val sql = "CREATE TABLE " + fileIngestionParameter.tableName + " USING com.databricks.spark.xml OPTIONS (path \"" + fileIngestionParameter.filePath +
+       /*"\", rootTag \"" + fileIngestionParameter.rootTag +*/
+       "\", rowTag \"" + fileIngestionParameter.rowTag +
+       "\")"
       sqlContext.sql(sql)
    }
 }

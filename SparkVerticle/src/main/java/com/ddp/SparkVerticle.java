@@ -260,12 +260,24 @@ public class SparkVerticle extends AbstractVerticle{
                 System.out.println("The result is: " + res.result());
             });
         }
-        else if(msg.parameter().className().equals(FileIngestionParameter.class.getCanonicalName())){
-            FileIngestionParameter a = (FileIngestionParameter)msg.parameter();
+        else if(msg.parameter().className().equals(csvIngestionParameter.class.getCanonicalName())){
+            csvIngestionParameter a = (csvIngestionParameter)msg.parameter();
 
             vertx.executeBlocking(future -> {
                 // Call some blocking API that takes a significant amount of time to return
-                Object result = fileIngestionEngine.run(a);
+                Object result = fileIngestionEngine.ingestCsv(a);
+                future.complete(result);
+            }, res -> {
+                System.out.println("The result is: " + res.result());
+            });
+
+        }
+        else if(msg.parameter().className().equals(xmlIngestionParameter.class.getCanonicalName())){
+            xmlIngestionParameter a = (xmlIngestionParameter)msg.parameter();
+
+            vertx.executeBlocking(future -> {
+                // Call some blocking API that takes a significant amount of time to return
+                Object result = fileIngestionEngine.ingestXml(a);
                 future.complete(result);
             }, res -> {
                 System.out.println("The result is: " + res.result());

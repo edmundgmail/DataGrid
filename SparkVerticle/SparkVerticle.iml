@@ -58,7 +58,6 @@
     <orderEntry type="library" name="Maven: asm:asm-tree:3.3.1" level="project" />
     <orderEntry type="library" name="Maven: asm:asm-analysis:3.3.1" level="project" />
     <orderEntry type="module" module-name="DataNavigatorUserApi" />
-    <orderEntry type="library" name="Maven: org.apache.spark:spark-xml_2.11:0.4.1" level="project" />
     <orderEntry type="library" name="Maven: net.sf.JRecord:JRecord:0.81" level="project" />
     <orderEntry type="library" name="Maven: net.sf.cb2xml:cb2xml:0.95.8" level="project" />
     <orderEntry type="library" name="Maven: org.scala-lang:scala-library:2.11.6" level="project" />
@@ -279,6 +278,7 @@
     <orderEntry type="library" name="Maven: org.apache.hadoop:hadoop-yarn-server-web-proxy:2.2.0" level="project" />
     <orderEntry type="library" name="Maven: org.apache.hadoop:hadoop-yarn-server-common:2.2.0" level="project" />
     <orderEntry type="library" name="Maven: org.apache.hadoop:hadoop-yarn-client:2.2.0" level="project" />
+    <orderEntry type="library" name="Maven: com.databricks:spark-xml_2.11:0.4.1" level="project" />
     <orderEntry type="library" name="Maven: org.apache.kafka:kafka_2.11:0.10.2.0" level="project" />
     <orderEntry type="library" name="Maven: org.apache.kafka:kafka-clients:0.10.2.0" level="project" />
     <orderEntry type="library" name="Maven: net.sf.jopt-simple:jopt-simple:5.0.3" level="project" />

@@ -107,7 +107,7 @@ limitations under the License.
     </dependency>
 
     <dependency> <!-- Spark dependency -->
-      <groupId>org.apache.spark</groupId>
+      <groupId>com.databricks</groupId>
       <artifactId>spark-xml_2.11</artifactId>
       <version>0.4.1</version>
       <scope>compile</scope>
