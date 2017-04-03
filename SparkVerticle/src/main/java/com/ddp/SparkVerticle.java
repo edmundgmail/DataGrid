@@ -21,6 +21,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.kafka.client.producer.KafkaProducerRecord;
+import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.kafka.clients.consumer.*;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -34,15 +35,23 @@ import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 
 import static com.ddp.util.ClassUtils.findClass;
+import static com.sun.tools.classfile.AccessFlags.Kind.Field;
+
+import org.apache.spark.sql.types.*;
 import org.xeustechnologies.jcl.JarClassLoader;
 import org.xeustechnologies.jcl.JclObjectFactory;
 
 /**
  * Created by cloudera on 2/8/17.
  */
+
+class MetaObject{
+    String sname;
+}
 
 public class SparkVerticle extends AbstractVerticle{
 
@@ -246,6 +255,17 @@ public class SparkVerticle extends AbstractVerticle{
         consumer.subscribe(consumerTopic);
     }
 
+    StructType buildStructType(String param){
+        MetaObject[] objects = new Gson().fromJson(param, MetaObject[].class);
+
+        List<StructField> list = new ArrayList<>();
+        for(MetaObject object : objects){
+            StructField field = new StructField(object.sname, DataTypes.StringType, true, Metadata.empty() );
+            list.add(field);
+        }
+        return new StructType((StructField[])list.toArray());
+    }
+
     private void handleEvent(BaseRequest msg) {
         SparkSession spark = (SparkSession) sparkSession;
 
@@ -265,7 +285,8 @@ public class SparkVerticle extends AbstractVerticle{
 
             vertx.executeBlocking(future -> {
                 // Call some blocking API that takes a significant amount of time to return
-                Object result = fileIngestionEngine.ingestCsv(a);
+                StructType schema = buildStructType(a.schema());
+                Object result = fileIngestionEngine.ingestCsv(a, schema);
                 future.complete(result);
             }, res -> {
                 System.out.println("The result is: " + res.result());
