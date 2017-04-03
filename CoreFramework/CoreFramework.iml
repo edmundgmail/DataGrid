@@ -102,6 +102,12 @@
     <orderEntry type="library" name="Maven: com.fasterxml.jackson.core:jackson-core:2.7.4" level="project" />
     <orderEntry type="library" name="Maven: com.fasterxml.jackson.core:jackson-databind:2.7.4" level="project" />
     <orderEntry type="library" name="Maven: com.fasterxml.jackson.core:jackson-annotations:2.7.0" level="project" />
+    <orderEntry type="library" name="Maven: io.vertx:vertx-sync:3.4.0.Beta1" level="project" />
+    <orderEntry type="library" name="Maven: co.paralleluniverse:quasar-core:jdk8:0.7.5" level="project" />
+    <orderEntry type="library" name="Maven: com.esotericsoftware:kryo:3.0.3" level="project" />
+    <orderEntry type="library" name="Maven: com.esotericsoftware:reflectasm:1.10.1" level="project" />
+    <orderEntry type="library" name="Maven: com.esotericsoftware:minlog:1.3.0" level="project" />
+    <orderEntry type="library" name="Maven: de.javakaffee:kryo-serializers:0.37" level="project" />
     <orderEntry type="library" name="Maven: io.vertx:vertx-web:3.4.0.Beta1" level="project" />
     <orderEntry type="library" name="Maven: io.vertx:vertx-auth-common:3.4.0.Beta1" level="project" />
     <orderEntry type="library" name="Maven: io.vertx:vertx-jdbc-client:3.4.0.Beta1" level="project" />
@@ -167,7 +173,6 @@
     <orderEntry type="library" name="Maven: org.apache.avro:avro-ipc:tests:1.7.7" level="project" />
     <orderEntry type="library" name="Maven: com.twitter:chill_2.11:0.8.0" level="project" />
     <orderEntry type="library" name="Maven: com.esotericsoftware:kryo-shaded:3.0.3" level="project" />
-    <orderEntry type="library" name="Maven: com.esotericsoftware:minlog:1.3.0" level="project" />
     <orderEntry type="library" name="Maven: com.twitter:chill-java:0.8.0" level="project" />
     <orderEntry type="library" name="Maven: org.apache.xbean:xbean-asm5-shaded:4.4" level="project" />
     <orderEntry type="library" name="Maven: org.apache.hadoop:hadoop-client:2.2.0" level="project" />

@@ -37,6 +37,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.jdbc.JDBCClient;
+import io.vertx.ext.sync.SyncVerticle;
 import io.vertx.ext.web.FileUpload;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
@@ -71,7 +72,7 @@ import io.vertx.core.http.HttpServerRequest;
 /**
  * @author <a href="http://tfox.org">Tim Fox</a>
  */
- public class SimpleREST extends AbstractVerticle {
+ public class SimpleREST extends SyncVerticle {
   private IDataBrowse dataBrowse;
   private Logger LOGGER = LoggerFactory.getLogger("SimpleREST");
   private JDBCClient client;
@@ -238,7 +239,7 @@ import io.vertx.core.http.HttpServerRequest;
         if(className.equals(csvIngestionParameter.class.getCanonicalName()) ||
                 className.equals(xmlIngestionParameter.class.getCanonicalName()) ){
             IngestionParameter parameter = (IngestionParameter) request.parameter();
-            dataBrowse.getEntityDetail(parameter.templateTableName(), parameter, );
+            parameter.updateSchema(dataBrowse.getEntityDetail(parameter.templateTableName()));
         }
     }
 

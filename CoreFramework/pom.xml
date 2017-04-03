@@ -278,6 +278,13 @@
 
         <dependency>
             <groupId>io.vertx</groupId>
+            <artifactId>vertx-sync</artifactId>
+            <version>${vertx.version}</version>
+            <scope>compile</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.vertx</groupId>
             <artifactId>vertx-web</artifactId>
             <version>${vertx.version}</version>
             <scope>compile</scope>
