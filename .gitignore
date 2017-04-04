@@ -1,5 +1,13 @@
+.vertx/
+SparkVerticle/src/main/resources/local/derby.log
 */.idea
 /.idea/*
 */target/
 test-output/
 .classpath_nb
+CoreFramework/CoreFramework.iml
+DataGrid.iml
+DataNavigatorUserApi/DataNavigatorUserApi.iml
+SimpleREST/SimpleREST.iml
+SparkVerticle/SparkVerticle.iml
+
