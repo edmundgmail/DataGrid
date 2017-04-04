@@ -17,6 +17,7 @@ import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -252,6 +253,13 @@ public class SparkVerticle extends AbstractVerticle{
         consumer.subscribe(consumerTopic);
     }
 
+    private JsonObject formatResult(BaseRequest request, Object result){
+        JsonObject ret = new JsonObject();
+        ret.put("result", result);
+        ret.put("sessionKey", request.sessionKey());
+        return ret;
+    }
+
     private void handleEvent(BaseRequest msg) {
         SparkSession spark = (SparkSession) sparkSession;
 
@@ -261,7 +269,7 @@ public class SparkVerticle extends AbstractVerticle{
             vertx.executeBlocking(future -> {
                 // Call some blocking API that takes a significant amount of time to return
                 Object result = copybookIngestion.run(a);
-                future.complete(result);
+                future.complete(formatResult(msg,result));
             }, res -> {
                 System.out.println("The result is: " + res.result());
             });
@@ -273,7 +281,7 @@ public class SparkVerticle extends AbstractVerticle{
                 // Call some blocking API that takes a significant amount of time to return
                 //StructType schema = buildStructType(a.schema());
                 Object result = fileIngestionEngine.ingestCsv(a);
-                future.complete(result);
+                future.complete(formatResult(msg,result));
             }, res -> {
                 System.out.println("The result is: " + res.result());
             });
@@ -285,7 +293,7 @@ public class SparkVerticle extends AbstractVerticle{
             vertx.executeBlocking(future -> {
                 // Call some blocking API that takes a significant amount of time to return
                 Object result = fileIngestionEngine.ingestXml(a);
-                future.complete(result);
+                future.complete(formatResult(msg,result));
             }, res -> {
                 System.out.println("The result is: " + res.result());
             });
@@ -297,7 +305,7 @@ public class SparkVerticle extends AbstractVerticle{
             vertx.executeBlocking(future -> {
                 // Call some blocking API that takes a significant amount of time to return
                 Object result = scalaSourceCompiiler.compile(a);
-                future.complete(result);
+                future.complete(formatResult(msg,result));
             }, res -> {
                 System.out.println("The result is: " + res.result());
             });
@@ -309,7 +317,7 @@ public class SparkVerticle extends AbstractVerticle{
             vertx.executeBlocking(future -> {
                 // Call some blocking API that takes a significant amount of time to return
                 Object result = jarLoader.load(a);
-                future.complete(result);
+                future.complete(formatResult(msg,result));
             }, res -> {
                 System.out.println("The result is: " + res.result());
             });
@@ -319,12 +327,13 @@ public class SparkVerticle extends AbstractVerticle{
             UserClassParameter a = (UserClassParameter)msg.parameter();
 
                 vertx.executeBlocking(future -> {
+                    Object result;
                     // Call some blocking API that takes a significant amount of time to return
                     if(!a.useSpark())
-                        runUserClass.run(a);
+                        result = runUserClass.run(a);
                     else
-                        runUserClass.runSpark(spark, a);
-                    //future.complete(result);
+                        result = runUserClass.runSpark(spark, a);
+                    future.complete(formatResult(msg,result));
                 }, res -> {
                     System.out.println("The result is: " + res.result());
                 });

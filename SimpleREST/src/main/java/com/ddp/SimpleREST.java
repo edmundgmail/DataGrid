@@ -273,7 +273,8 @@ import io.vertx.core.http.HttpServerRequest;
                 }
 
                 JsonObject o = new JsonObject();
-                o.put("key", "test this is");
+                o.put("sessionKey", request.sessionKey());
+                o.put("result", "Submitted");
                 responseHandler.accept(o.encode());
             }
         });

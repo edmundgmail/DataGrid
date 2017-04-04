@@ -18,7 +18,7 @@ case class FileIngestionEngine (sqlContext : SQLContext){
 
     val tempView = fileIngestionParameter.tableName + Utils.getRandom
     val option = if(fileIngestionParameter.hasHeader) "true" else "false"
-    if(fileIngestionParameter.schema !=null){
+    if(fileIngestionParameter.schema !=null && !fileIngestionParameter.schema.isEmpty){
       val s = new Gson().fromJson(fileIngestionParameter.schema, classOf[Array[MetaObject]])
       val schema = StructType(s.map(f=>new StructField(f.sname, DataTypes.StringType, true)))
       val df = sqlContext.read
@@ -28,20 +28,43 @@ case class FileIngestionEngine (sqlContext : SQLContext){
         .load(fileIngestionParameter.filePath)
         .createOrReplaceTempView(tempView)
 
-      sqlContext.sql("CREATE TABLE " + fileIngestionParameter.tableName + " SELECT * FROM " + tempView )
+      sqlContext.sql("CREATE TABLE " + fileIngestionParameter.tableName + " SELECT * FROM " + tempView ).show(10)
 
     }else{
       val sql = "CREATE TABLE " + fileIngestionParameter.tableName + " USING com.databricks.spark.csv OPTIONS (path \"" + fileIngestionParameter.filePath + "\", header \"true\", inferSchema \"true\")"
-      sqlContext.sql(sql)
-
+      sqlContext.sql(sql).show(10)
     }
+
+    if(fileIngestionParameter.returnSampleSize>0)
+      return sqlContext.sql("SELECT * FROM " + fileIngestionParameter.tableName + " limit " + fileIngestionParameter.returnSampleSize)
   }
 
    def ingestXml(fileIngestionParameter: xmlIngestionParameter): Any ={
+     val tempView = fileIngestionParameter.tableName + Utils.getRandom
+     val option = if(fileIngestionParameter.hasHeader) "true" else "false"
+     if(fileIngestionParameter.schema !=null && !fileIngestionParameter.schema.isEmpty){
+       val s = new Gson().fromJson(fileIngestionParameter.schema, classOf[Array[MetaObject]])
+       val schema = StructType(s.map(f=>new StructField(f.sname, DataTypes.StringType, true)))
+       val df = sqlContext.read
+         .format("com.databricks.spark.xml")
+         .option("header", option) // Use first line of all files as header
+         .option("rootTag", fileIngestionParameter.rootTag)
+         .option("rowTag", fileIngestionParameter.rowTag)
+         .schema(schema)
+         .load(fileIngestionParameter.filePath)
+         .createOrReplaceTempView(tempView)
+
+       sqlContext.sql("CREATE TABLE " + fileIngestionParameter.tableName + " SELECT * FROM " + tempView ).show(10)
+
+     }else{
      val sql = "CREATE TABLE " + fileIngestionParameter.tableName + " USING com.databricks.spark.xml OPTIONS (path \"" + fileIngestionParameter.filePath +
        "\", rootTag \"" + fileIngestionParameter.rootTag +
        "\", rowTag \"" + fileIngestionParameter.rowTag +
        "\")"
       sqlContext.sql(sql)
+    }
+
+     if(fileIngestionParameter.returnSampleSize>0)
+       return sqlContext.sql("SELECT * FROM " + fileIngestionParameter.tableName + " limit " + fileIngestionParameter.returnSampleSize)
    }
 }

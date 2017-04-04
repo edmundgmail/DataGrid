@@ -15,6 +15,7 @@ trait IngestionParameter extends UserParameter{
 	val templateTableName : String
   var schema : String
 	val hasHeader: Boolean
+	val returnSampleSize:Integer
 
   def updateSchema(s:String): Unit ={
     schema = s
@@ -22,8 +23,8 @@ trait IngestionParameter extends UserParameter{
 
 }
 
-case class csvIngestionParameter( override  val className: String,override  val  filePath:String, override  val tableName : String , override val templateTableName:String, override  var schema : String, hasHeader : Boolean) extends IngestionParameter
-case class xmlIngestionParameter(override  val className: String, override  val  filePath:String, override  val tableName : String , override val templateTableName:String, override  var schema : String, hasHeader : Boolean, rowTag: String, rootTag:String) extends IngestionParameter
+case class csvIngestionParameter( override  val className: String,override  val  filePath:String, override  val tableName : String , override val templateTableName:String, override  var schema : String, hasHeader : Boolean, returnSampleSize: Integer) extends IngestionParameter
+case class xmlIngestionParameter(override  val className: String, override  val  filePath:String, override  val tableName : String , override val templateTableName:String, override  var schema : String, hasHeader : Boolean, rowTag: String, rootTag:String, returnSampleSize: Integer) extends IngestionParameter
 
 case class CopybookIngestionParameter(    //code 1
 																		 override  val className: String,
