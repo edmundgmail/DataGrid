@@ -11,5 +11,5 @@ import java.util.function.Function;
  */
 public interface IDataBrowse {
     public void handleListHierarchy(Consumer<Integer> errHandler, Consumer<String> responseHandler, int pageNum, int pageSize, Long sourceID, Long entityID);
-    public String getEntityDetail(String entityName);
+    public void getEntityDetail(String entityName, Consumer<String> c);
 }

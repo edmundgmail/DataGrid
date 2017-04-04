@@ -2,15 +2,28 @@ package com.ddp.ingestion
 
 import com.ddp.access.{csvIngestionParameter, xmlIngestionParameter}
 import org.apache.spark.sql.SQLContext
+import org.apache.spark.sql.types.StructType
+import org.json4s.jackson.Json
 
 /**
   * Created by cloudera on 3/30/17.
   */
 case class FileIngestionEngine (sqlContext : SQLContext){
 
-  def ingestCsv(fileIngestionParameter: csvIngestionParameter): Any ={
-    val sql = "CREATE TABLE " + fileIngestionParameter.tableName + " USING com.databricks.spark.csv OPTIONS (path \"" + fileIngestionParameter.filePath + "\", header \"true\", inferSchema \"true\")"
-    sqlContext.sql(sql)
+  def ingestCsv(fileIngestionParameter: csvIngestionParameter, schema : StructType): Any ={
+
+    if(schema==null){
+      val df = sqlContext.read
+        .format("com.databricks.spark.csv")
+        .option("header", fileIngestionParameter.hasHeader? "true" : "false") // Use first line of all files as header
+        .schema(schema)
+        .load(fileIngestionParameter.filePath)
+
+    }else{
+      val sql = "CREATE TABLE " + fileIngestionParameter.tableName + " USING com.databricks.spark.csv OPTIONS (path \"" + fileIngestionParameter.filePath + "\", header \"true\", inferSchema \"true\")"
+      sqlContext.sql(sql)
+
+    }
   }
 
    def ingestXml(fileIngestionParameter: xmlIngestionParameter): Any ={

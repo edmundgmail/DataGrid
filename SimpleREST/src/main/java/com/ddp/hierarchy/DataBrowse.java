@@ -13,8 +13,6 @@ import org.apache.commons.lang.StringUtils;
 
 import java.util.function.Consumer;
 import java.util.function.Function;
-import static io.vertx.ext.sync.Sync.awaitResult;
-import co.paralleluniverse.fibers.Suspendable;
 
 /**
  * Created by cloudera on 1/24/17.
@@ -26,26 +24,34 @@ public class DataBrowse implements IDataBrowse{
 
     public DataBrowse(JDBCClient client){this.client=client;}
 
-    @Suspendable
-    public String getEntityDetail(String entityName) {
+    public void getEntityDetail(String entityName, Consumer<String> c) {
         if(StringUtils.isEmpty(entityName)){
-            return null;
+            return;
         }
 
         String names[] = entityName.split("\\.");
         if(names.length!=2) {
             LOGGER.error("The entityName should be in sourceName.entityName format");
-            return null;
+            return;
         }
+        client.getConnection( res-> {
+            if(res.succeeded()){
+                res.result().queryWithParams("select f.sname from datafield f, dataentity e, datasource s where f.entity_id=e.entity_id and e.source_id=s.source_id and s.sname=? and e.sname=?", new JsonArray().add(names[0]).add(names[1]), query -> {
+                    if(query.succeeded()){
+                        c.accept(new JsonArray(query.result().getRows()).encode());
+                    }
+                });
+            }
+        });
 
-        try (SQLConnection conn = awaitResult(client::getConnection)) {
-            ResultSet resultSet = awaitResult(h-> conn.queryWithParams("select f.sname from datafield f, dataentity e, datasource s where f.entity_id=e.entity_id and e.source_id=s.source_id and s.sname=? and e.sname=?", new JsonArray().add(names[0]).add(names[1]), h));
+        /*try (SQLConnection conn = awaitResult(client::getConnection)) {
+            ResultSet resultSet = awaitResult(h-> conn.queryWithParams(, h));
             return new JsonArray(resultSet.getRows()).encode();
         }catch (Exception e){
             LOGGER.error(e.getMessage());
             e.printStackTrace();
             return null;
-        }
+        }*/
     }
 
     public void handleListHierarchy(Consumer<Integer> errorHandler, Consumer<String> responseHandler, int pageNum, int pageSize, Long sourceID, Long entityID) {

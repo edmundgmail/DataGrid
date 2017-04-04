@@ -46,7 +46,10 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.*;
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import com.ddp.util.*;
 import io.vertx.ext.web.handler.BodyHandler;
@@ -72,7 +75,7 @@ import io.vertx.core.http.HttpServerRequest;
 /**
  * @author <a href="http://tfox.org">Tim Fox</a>
  */
- public class SimpleREST extends SyncVerticle {
+ public class SimpleREST extends AbstractVerticle {
   private IDataBrowse dataBrowse;
   private Logger LOGGER = LoggerFactory.getLogger("SimpleREST");
   private JDBCClient client;
@@ -225,48 +228,52 @@ import io.vertx.core.http.HttpServerRequest;
             });
     }
 
-    private static void notifySpark(String s){
 
+    private static void sendToSpark(BaseRequest request){
+        KafkaProducerRecord<String, BaseRequest> record = KafkaProducerRecord.create(producerTopic, request);
+        producer.write(record, done -> {
+            System.out.println("Message " + record.value()+ done.toString());
 
-
+        });
     }
 
-    private void doPadding(BaseRequest request){
-        String className = request.parameter().className();
+    BiConsumer<BaseRequest, String> biConsumer = (request, padding)-> {
+        IngestionParameter parameter = (IngestionParameter) request.parameter();
+        parameter.updateSchema(padding);
+        sendToSpark(request);
+    };
 
-        if(!request.needPadding())return;
+    Function<BaseRequest,Consumer<String>> currier = a -> b -> biConsumer.accept( a, b ) ;
 
-        if(className.equals(csvIngestionParameter.class.getCanonicalName()) ||
-                className.equals(xmlIngestionParameter.class.getCanonicalName()) ){
-            IngestionParameter parameter = (IngestionParameter) request.parameter();
-            parameter.updateSchema(dataBrowse.getEntityDetail(parameter.templateTableName()));
-        }
-    }
 
-    private void postSparkRunner(RoutingContext routingContext){
+    private void postSparkRunner(RoutingContext routingContext) {
         // Custom message
 
         HttpServerResponse response = routingContext.response();
-        Consumer<Integer> errorHandler = i-> response.setStatusCode(i).end();
-        Consumer<String> responseHandler = s-> response.putHeader("content-type", "application/json").end(s);
+        Consumer<Integer> errorHandler = i -> response.setStatusCode(i).end();
+        Consumer<String> responseHandler = s -> response.putHeader("content-type", "application/json").end(s);
 
         routingContext.request().bodyHandler(new Handler<Buffer>() {
             @Override
             public void handle(Buffer buffer) {
                 LOGGER.info("buffer=" + buffer.toString());
                 BaseRequest request = gson.fromJson(buffer.toString(), BaseRequest.class);
-                doPadding(request);
 
-                LOGGER.info("request=" + request);
-
-                KafkaProducerRecord<String, BaseRequest> record = KafkaProducerRecord.create(producerTopic, request);
-                producer.write(record, done -> {
-                        System.out.println("Message " + record.value()+ done.toString());
-
-                });
+                if (request.needPadding()) {
+                    String className = request.parameter().className();
+                    if (className.equals(csvIngestionParameter.class.getCanonicalName()) ||
+                            className.equals(xmlIngestionParameter.class.getCanonicalName())) {
+                        IngestionParameter parameter = (IngestionParameter) request.parameter();
+                        Consumer curried = currier.apply(request);
+                        dataBrowse.getEntityDetail(parameter.templateTableName(), curried);
+                    }
+                }
+                else {
+                    sendToSpark(request);
+                }
 
                 JsonObject o = new JsonObject();
-                o.put("key","test this is");
+                o.put("key", "test this is");
                 responseHandler.accept(o.encode());
             }
         });
