@@ -10,13 +10,6 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="module" module-name="CoreFramework" />
-    <orderEntry type="module" module-name="DataNavigatorUserApi" />
-    <orderEntry type="library" name="Maven: io.vertx:vertx-sync:3.4.0.Beta1" level="project" />
-    <orderEntry type="library" name="Maven: co.paralleluniverse:quasar-core:jdk8:0.7.5" level="project" />
-    <orderEntry type="library" name="Maven: com.esotericsoftware:kryo:3.0.3" level="project" />
-    <orderEntry type="library" name="Maven: com.esotericsoftware:reflectasm:1.10.1" level="project" />
-    <orderEntry type="library" name="Maven: de.javakaffee:kryo-serializers:0.37" level="project" />
     <orderEntry type="library" name="Maven: org.apache.curator:curator-framework:2.6.0" level="project" />
     <orderEntry type="module" module-name="CoreFramework" />
     <orderEntry type="library" name="Maven: io.netty:netty-tcnative-boringssl-static:1.1.33.Fork17" level="project" />
