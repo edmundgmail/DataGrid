@@ -1,7 +1,7 @@
 {
   "http.port": 8082,
   "driver.class": "com.mysql.jdbc.Driver",
-  "sql.url": "jdbc:mysql://localhost:3306/metadata_ddp?user=root&password=password",
+  "sql.url": "jdbc:mysql://t440.example.com:3306/metadata_ddp?user=ddp&password=password",
   "local.upload.home":"/tmp/upload",
   "hdfs.upload.home":"/user/cloudera/upload",
   "kafka.brokers":"localhost:9092",

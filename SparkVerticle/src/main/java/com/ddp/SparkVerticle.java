@@ -28,7 +28,8 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.spark.SparkConf;
 import org.apache.spark.sql.SparkSession;
-
+import org.apache.spark.sql.SQLContext;
+import org.apache.spark.sql.types.*;
 
 import java.io.File;
 import java.lang.reflect.Method;
@@ -48,10 +49,6 @@ import org.xeustechnologies.jcl.JclObjectFactory;
 /**
  * Created by cloudera on 2/8/17.
  */
-
-class MetaObject{
-    String sname;
-}
 
 public class SparkVerticle extends AbstractVerticle{
 
@@ -255,17 +252,6 @@ public class SparkVerticle extends AbstractVerticle{
         consumer.subscribe(consumerTopic);
     }
 
-    StructType buildStructType(String param){
-        MetaObject[] objects = new Gson().fromJson(param, MetaObject[].class);
-
-        List<StructField> list = new ArrayList<>();
-        for(MetaObject object : objects){
-            StructField field = new StructField(object.sname, DataTypes.StringType, true, Metadata.empty() );
-            list.add(field);
-        }
-        return new StructType((StructField[])list.toArray());
-    }
-
     private void handleEvent(BaseRequest msg) {
         SparkSession spark = (SparkSession) sparkSession;
 
@@ -285,8 +271,8 @@ public class SparkVerticle extends AbstractVerticle{
 
             vertx.executeBlocking(future -> {
                 // Call some blocking API that takes a significant amount of time to return
-                StructType schema = buildStructType(a.schema());
-                Object result = fileIngestionEngine.ingestCsv(a, schema);
+                //StructType schema = buildStructType(a.schema());
+                Object result = fileIngestionEngine.ingestCsv(a);
                 future.complete(result);
             }, res -> {
                 System.out.println("The result is: " + res.result());

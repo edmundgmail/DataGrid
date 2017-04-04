@@ -9,6 +9,7 @@ import org.apache.hadoop.fs.FileSystem
   * Created by eguo on 11/15/16.
   */
 object Utils {
+  def getRandom = util.Random.nextInt(10000)
   def getTempPath = "/tmp/ddp/" + System.currentTimeMillis + "_" + util.Random.nextInt(10000) + ".tmp"
 
   def getHdfsConf = {
