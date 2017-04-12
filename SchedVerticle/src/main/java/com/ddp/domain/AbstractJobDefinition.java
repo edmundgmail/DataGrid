@@ -16,7 +16,7 @@ public abstract class AbstractJobDefinition implements JobDefinition {
                 .setName(jobDetail.getKey().getName())
                 .setData(jobDetail.getJobDataMap().getWrappedMap());
 
-        List<TriggerDescriptor> triggerDescriptors = new ArrayList<>();
+        List<TriggerDescriptor> triggerDescriptors = new ArrayList<TriggerDescriptor>();
 
         for (Trigger trigger : triggersOfJob) {
             triggerDescriptors.add(TriggerDescriptor.buildDescriptor(trigger));

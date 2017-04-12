@@ -28,6 +28,14 @@
             <version>0.1</version>
             <scope>compile</scope>
         </dependency>
+
+        <dependency>
+            <groupId>com.ddp</groupId>
+            <artifactId>SchedVerticle</artifactId>
+            <version>0.1</version>
+            <scope>compile</scope>
+        </dependency>
+
         <dependency>
             <groupId>io.vertx</groupId>
             <artifactId>vertx-rx-java</artifactId>

@@ -68,6 +68,10 @@ import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
+import org.quartz.JobDetail;
+import org.quartz.JobKey;
+import org.quartz.SchedulerException;
+import org.quartz.Trigger;
 import rx.Observable;
 import io.vertx.core.http.HttpServerRequest;
 
@@ -90,6 +94,8 @@ import io.vertx.core.http.HttpServerRequest;
     private static Integer httpPort;
     private static String sqlDriverClass;
     private static String sqlUrl;
+    private static String toScheduleEvent;
+    private static EventBus eventBus;
 
     private static UserParameterDeserializer userParameterDeserializer = UserParameterDeserializer.getInstance();
     private static Gson gson = new GsonBuilder().registerTypeAdapter(UserParameter.class, userParameterDeserializer).create();
@@ -111,6 +117,7 @@ import io.vertx.core.http.HttpServerRequest;
         groupId = js.getString("group.id");
         localUploadHome =js.getString("local.upload.home");
         hdfsUploadHome =js.getString("hdfs.upload.home");
+        toScheduleEvent = js.getString("eventbus.schedverticle");
     }
 
 
@@ -165,9 +172,11 @@ import io.vertx.core.http.HttpServerRequest;
               .setUploadsDirectory(localUploadHome));
       router.post("/postScalaFiles").handler(this::postScalaFiles);
 
+
+
+
       vertx.createHttpServer().requestHandler(router::accept).listen(httpPort);
     }
-
 
     private List<String>  getUploadedFiles(RoutingContext ctx){
         // any number of uploads
@@ -325,6 +334,9 @@ import io.vertx.core.http.HttpServerRequest;
 
 
     private void setUpInitialData() {
+     eventBus = getVertx().eventBus();
+     eventBus.registerDefaultCodec(BaseRequest.class, new BaseRequestCodec());
+
      final JDBCClient client = JDBCClient.createShared(vertx, new JsonObject()
              .put("url", sqlUrl)
              .put("driver_class", sqlDriverClass)

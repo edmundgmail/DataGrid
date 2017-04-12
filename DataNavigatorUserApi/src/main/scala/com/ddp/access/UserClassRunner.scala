@@ -9,6 +9,17 @@ case class BaseRequest(sessionKey : Long,  parameter: UserParameter, needPadding
 
 case class UserClassParameter(override val className:String, userClassName:String, useSpark : Boolean = false) extends UserParameter
 
+/*
+trait JobParameter extends  UserParameter{
+	val name:String
+	val group: String
+}
+case class GridJobKey(override val className:String, override val name:String ,override val group:String) extends JobParameter
+case class GridJobDescriptor(override val className:String, override val name:String ,override val group:String, val triggers: List[TriggerDescriptor], val data: Map[String, Any]) extends JobParameter
+
+case class TriggerDescriptor(override val className:String, name:String ,group:String) extends JobParameter
+*/
+
 trait IngestionParameter extends UserParameter{
   val filePath:String
   val tableName : String

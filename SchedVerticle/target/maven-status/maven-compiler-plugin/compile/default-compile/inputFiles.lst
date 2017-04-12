@@ -1,0 +1,7 @@
+/home/eguo/workspace/DataGrid/SchedVerticle/src/main/java/com/ddp/domain/JobDefinition.java
+/home/eguo/workspace/DataGrid/SchedVerticle/src/main/java/com/ddp/domain/JobDescriptor.java
+/home/eguo/workspace/DataGrid/SchedVerticle/src/main/java/com/ddp/domain/AbstractJobDefinition.java
+/home/eguo/workspace/DataGrid/SchedVerticle/src/main/java/com/ddp/SchedVerticle.java
+/home/eguo/workspace/DataGrid/SchedVerticle/src/main/java/com/ddp/domain/LogJobDefinition.java
+/home/eguo/workspace/DataGrid/SchedVerticle/src/main/java/com/ddp/domain/HttpJobDefinition.java
+/home/eguo/workspace/DataGrid/SchedVerticle/src/main/java/com/ddp/domain/TriggerDescriptor.java

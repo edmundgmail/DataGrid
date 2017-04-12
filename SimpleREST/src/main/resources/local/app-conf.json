@@ -7,5 +7,7 @@
   "kafka.brokers":"localhost:9092",
   "out.topic":"topic.to.sparkVerticle",
   "in.topic":"topic.to.restVerticle",
-  "group.id" : "group.rest"
+  "group.id" : "group.rest",
+  "eventbus.schedverticle":"eventbus.schedverticle"
+
 }

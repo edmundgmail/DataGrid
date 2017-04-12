@@ -3,7 +3,6 @@ package com.ddp.domain;
 import org.quartz.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import restx.factory.Component;
 
 import java.util.List;
 
@@ -13,7 +12,7 @@ import static org.quartz.JobBuilder.newJob;
  * Date: 19/2/14
  * Time: 06:24
  */
-@Component
+
 public class LogJobDefinition extends AbstractJobDefinition {
     private static final Logger logger = LoggerFactory.getLogger(LogJobDefinition.class);
 

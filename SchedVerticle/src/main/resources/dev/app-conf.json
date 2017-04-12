@@ -1,0 +1,18 @@
+{
+  "http.port": 8082,
+  "hdfs.conf": "hdfs://localhost:8020/",
+  "mysql.driver.class": "com.mysql.jdbc.Driver",
+  "mysql.url": "jdbc:mysql://localhost:3306/metadata_ddp?user=root&password=password",
+  "address":"ev-tst",
+  "groupId" : "1",
+  "kafkaTopic" : "topic123",
+  "zk" : "localhost:2181",
+  "offsetReset" : "largest",
+  "maxUnacknowledged" : 100,
+  "maxUncommitted" : 1000,
+  "ackTimeoutSeconds" : 600,
+  "maxRetries" : 100,
+  "initialRetryDelaySeconds" : 1,
+  "maxRetryDelaySeconds" : 10,
+  "eventBusSendTimeout" : 30
+}

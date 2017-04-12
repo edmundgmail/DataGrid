@@ -1,0 +1,11 @@
+com/ddp/SchedVerticle.class
+com/ddp/domain/LogJobDefinition$LogJobDescriptor.class
+com/ddp/domain/JobDescriptor.class
+com/ddp/domain/HttpJobDefinition$HttpJob.class
+com/ddp/domain/TriggerDescriptor.class
+com/ddp/domain/HttpJobDefinition.class
+com/ddp/domain/LogJobDefinition$LogJob.class
+com/ddp/domain/JobDefinition.class
+com/ddp/domain/HttpJobDefinition$HttpJobDescriptor.class
+com/ddp/domain/LogJobDefinition.class
+com/ddp/domain/AbstractJobDefinition.class

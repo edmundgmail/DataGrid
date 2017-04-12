@@ -1,10 +1,8 @@
 package com.ddp.domain;
 
-import com.github.kevinsawicki.http.HttpRequest;
 import org.quartz.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import restx.factory.Component;
 
 import java.util.List;
 
@@ -15,7 +13,6 @@ import static org.quartz.JobBuilder.newJob;
  * Date: 19/2/14
  * Time: 06:34
  */
-@Component
 public class HttpJobDefinition extends AbstractJobDefinition {
     private static final Logger logger = LoggerFactory.getLogger(HttpJobDefinition.class);
 
@@ -131,6 +128,7 @@ public class HttpJobDefinition extends AbstractJobDefinition {
             JobDataMap jobDataMap = context.getJobDetail().getJobDataMap();
             String url = jobDataMap.getString("url");
             String method = jobDataMap.getString("method");
+            /*
             HttpRequest request = new HttpRequest(url, method);
 
             String body = "";
@@ -146,8 +144,10 @@ public class HttpJobDefinition extends AbstractJobDefinition {
             String responseBody = request.body();
 
             logger.info("{} {} => {}\n{}", method, url, code, responseBody);
+            */
         }
 
+        /*
         private void setCrendentials(JobDataMap jobDataMap, HttpRequest request) {
             String login = jobDataMap.getString("login");
             String pwd = jobDataMap.getString("pwd");
@@ -161,7 +161,7 @@ public class HttpJobDefinition extends AbstractJobDefinition {
             if (!isNullOrEmpty(contentType)) {
                 request.contentType(contentType);
             }
-        }
+        }*/
     }
 
 }

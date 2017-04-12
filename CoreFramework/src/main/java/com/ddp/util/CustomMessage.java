@@ -5,6 +5,11 @@ package com.ddp.util;
  * @author Junbong
  */
 public class CustomMessage {
+  public static final int STATUS_SUCCESS = 200;
+
+  public static final int STATUS_GET_JOBS = 1;
+  public static final int STATUS_POST_JOBS = 2;
+
   private final int statusCode;
   private final String resultCode;
   private final String summary;

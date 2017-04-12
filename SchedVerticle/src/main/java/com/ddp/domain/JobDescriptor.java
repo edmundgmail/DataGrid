@@ -25,10 +25,10 @@ import java.util.*;
 public abstract class JobDescriptor {
     private String name;
     private String group;
-    private Map<String, Object> data = new LinkedHashMap<>();
+    private Map<String, Object> data = new LinkedHashMap<String, Object>();
 
     @JsonProperty("triggers")
-    private List<TriggerDescriptor> triggerDescriptors = new ArrayList<>();
+    private List<TriggerDescriptor> triggerDescriptors = new ArrayList<TriggerDescriptor>();
 
     public String getName() {
         return name;
@@ -68,7 +68,7 @@ public abstract class JobDescriptor {
 
     @JsonIgnore
     public Set<Trigger> buildTriggers() {
-        Set<Trigger> triggers = new LinkedHashSet<>();
+        Set<Trigger> triggers = new LinkedHashSet<Trigger>();
         for (TriggerDescriptor triggerDescriptor : triggerDescriptors) {
             triggers.add(triggerDescriptor.buildTrigger());
         }
