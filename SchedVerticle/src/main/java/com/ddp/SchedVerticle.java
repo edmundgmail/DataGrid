@@ -127,8 +127,23 @@ public class SchedVerticle extends AbstractVerticle {
         Consumer<String> responseHandler = s-> response.putHeader("content-type", "application/json").end(s);
 
         try{
-            String messgaeBody = gson.toJson(scheduler.getJobKeys(GroupMatcher.anyJobGroup()));
-            responseHandler.accept(messgaeBody);
+            //String messgaeBody = gson.toJson(scheduler.getJobKeys(GroupMatcher.anyJobGroup()));
+            for (String groupName : scheduler.getJobGroupNames()) {
+
+                for (JobKey jobKey : scheduler.getJobKeys(GroupMatcher.jobGroupEquals(groupName))) {
+
+                    String jobName = jobKey.getName();
+                    String jobGroup = jobKey.getGroup();
+
+                    List<Trigger> triggers = (List<Trigger>) scheduler.getTriggersOfJob(jobKey);
+                    Date nextFireTime = triggers.get(0).getNextFireTime();
+
+                    System.out.println("[jobName] : " + jobName + " [groupName] : "
+                            + jobGroup + " - " + nextFireTime);
+                }
+            }
+
+            //responseHandler.accept(messgaeBody);
         }catch (SchedulerException e)
         {
             throw new RuntimeException(e);

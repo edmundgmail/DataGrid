@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.gson.annotations.SerializedName;
 import org.quartz.JobDetail;
 import org.quartz.Trigger;
 
@@ -27,7 +28,7 @@ public abstract class JobDescriptor {
     private String group;
     private Map<String, Object> data = new LinkedHashMap<String, Object>();
 
-    @JsonProperty("triggers")
+    @SerializedName("triggers")
     private List<TriggerDescriptor> triggerDescriptors = new ArrayList<TriggerDescriptor>();
 
     public String getName() {
