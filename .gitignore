@@ -10,4 +10,5 @@ DataGrid.iml
 DataNavigatorUserApi/DataNavigatorUserApi.iml
 SimpleREST/SimpleREST.iml
 SparkVerticle/SparkVerticle.iml
+SchedVerticle/SchedVerticle.iml
 
