@@ -75,30 +75,6 @@ public class SchedVerticle extends AbstractVerticle {
         }
     }
 
-    public static void main(String argv[]){
-
-        VertxOptions options = new VertxOptions().setBlockedThreadCheckInterval(200000000);
-        options.setClustered(true);
-
-        Vertx.clusteredVertx(options, res -> {
-            if (res.succeeded()) {
-                Vertx vertx = res.result();
-                final JsonObject js = new JsonObject();
-                vertx.fileSystem().readFile("app-conf.json", result -> {
-                    if (result.succeeded()) {
-                        Buffer buff = result.result();
-                        js.mergeIn(new JsonObject(buff.toString()));
-                        DeploymentOptions deploymentOptions = new DeploymentOptions().setConfig(js).setMaxWorkerExecuteTime(5000).setWorker(true).setWorkerPoolSize(5);
-                        vertx.deployVerticle(SchedVerticle.class.getName(), deploymentOptions);
-                    } else {
-                        System.err.println("Oh oh ..." + result.cause());
-                    }
-                });
-
-            }
-        });
-    }
-
     @Override
     public void start() {
         try{

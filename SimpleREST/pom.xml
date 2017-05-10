@@ -32,7 +32,7 @@
         <dependency>
             <groupId>com.ddp</groupId>
             <artifactId>SchedVerticle</artifactId>
-            <version>0.1</version>
+            <version>0.1-SNAPSHOT</version>
             <scope>compile</scope>
         </dependency>
 

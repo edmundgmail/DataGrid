@@ -295,10 +295,10 @@ import io.vertx.core.http.HttpServerRequest;
 
     int pageNum = NumberUtils.toInt(routingContext.request().getParam("pageNum"), 0);
     int pageSize = NumberUtils.toInt(routingContext.request().getParam("pageSize"), 20);
-    Long sourceID = NumberUtils.toLong(routingContext.request().getParam("sourceID"), 0);
-    Long entityID = NumberUtils.toLong(routingContext.request().getParam("entityID"),0);
+    String level = routingContext.request().getParam("level");
+    Long id = NumberUtils.toLong(routingContext.request().getParam("id"),0);
 
-    dataBrowse.handleListHierarchy(errorHandler, responseHandler, pageNum, pageSize, sourceID, entityID);
+    dataBrowse.handleListHierarchy(errorHandler, responseHandler, pageNum, pageSize, level, id);
 
 }
 
