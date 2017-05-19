@@ -294,7 +294,7 @@ import io.vertx.core.http.HttpServerRequest;
     Consumer<String> responseHandler = s-> response.putHeader("content-type", "application/json").end(s);
 
     int pageNum = NumberUtils.toInt(routingContext.request().getParam("pageNum"), 0);
-    int pageSize = NumberUtils.toInt(routingContext.request().getParam("pageSize"), 20);
+    int pageSize = NumberUtils.toInt(routingContext.request().getParam("pageSize"), 10000);
     String level = routingContext.request().getParam("level");
     Long id = NumberUtils.toLong(routingContext.request().getParam("id"),0);
 

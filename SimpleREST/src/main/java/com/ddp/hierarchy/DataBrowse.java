@@ -71,7 +71,7 @@ public class DataBrowse implements IDataBrowse{
 
 
     private void listDataFields(SQLConnection conn, Long entityID,  int pageNum, int pageSize, Consumer<Integer> errorHandler, Consumer<String> responseHandler) {
-        conn.queryWithParams("SELECT datafield_id as id, sname as name, 'datafield' as level, comments as description FROM datafield where dataentity_id=? LIMIT ?, ?", new JsonArray().add(entityID).add(pageNum).add(pageSize), query -> {
+        conn.queryWithParams("SELECT datafield_id as id, sname as name, 'datafield' as level, business_desc as description FROM datafield where entity_id=? LIMIT ?, ?", new JsonArray().add(entityID).add(pageNum).add(pageSize), query -> {
             if (query.failed()) {
                 errorHandler.accept(500);
             } else {
@@ -86,7 +86,7 @@ public class DataBrowse implements IDataBrowse{
     }
 
     private void listDataEntities(SQLConnection conn, Long sourceID,  int pageNum, int pageSize, Consumer<Integer> errorHandler, Consumer<String> responseHandler) {
-        conn.queryWithParams("SELECT dataentity_id as id, sname as name, 'dataentity' as level, comments as description FROM dataentity where datasource_id=? LIMIT ?, ?", new JsonArray().add(sourceID).add(pageNum).add(pageSize), query -> {
+        conn.queryWithParams("SELECT dataentity_id as id, sname as name, 'dataentity' as level, business_desc as description, 0 as newadd FROM dataentity where source_id=? LIMIT ?, ?", new JsonArray().add(sourceID).add(pageNum).add(pageSize), query -> {
             if (query.failed()) {
                 errorHandler.accept(500);
             } else {
@@ -101,7 +101,7 @@ public class DataBrowse implements IDataBrowse{
     }
 
     private void listDataSources(SQLConnection conn,  int pageNum, int pageSize, Consumer<Integer> errorHandler, Consumer<String> responseHandler){
-        conn.queryWithParams("SELECT datasource_id as id, sname as name, 'datasource' as level, description FROM datasource LIMIT ?, ?", new JsonArray().add(pageNum).add(pageSize), query -> {
+        conn.queryWithParams("SELECT datasource_id as id, sname as name, 'datasource' as level, business_desc as description FROM datasource LIMIT ?, ?", new JsonArray().add(pageNum).add(pageSize), query -> {
             if (query.failed()) {
                 errorHandler.accept(500);
             } else {
