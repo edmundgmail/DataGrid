@@ -1,12 +1,17 @@
 package com.ddp.hierarchy;
 
 import com.ddp.access.IngestionParameter;
+import com.ddp.access.NewDataSourceParameter;
+import io.vertx.core.Future;
 import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.jdbc.JDBCClient;
 import io.vertx.ext.sql.ResultSet;
 import io.vertx.ext.sql.SQLConnection;
+import io.vertx.ext.sql.UpdateResult;
+import jdk.nashorn.api.scripting.JSObject;
 import jodd.util.StringUtil;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
@@ -23,6 +28,49 @@ public class DataBrowse implements IDataBrowse{
     private JDBCClient client;
 
     public DataBrowse(JDBCClient client){this.client=client;}
+
+    public void handleUpdateHierarchy(Consumer<Integer> errHandler, Consumer<String> responseHandler, NewDataSourceParameter newDataSourceParameter){
+
+        client.getConnection( res-> {
+            if(res.succeeded()) {
+                if(newDataSourceParameter.level().equalsIgnoreCase("datasource")){
+                    String sql = "insert into datasource (sname, business_desc,nid) values (?, ?,0)";
+                    res.result().updateWithParams(sql,
+                            new JsonArray().add(newDataSourceParameter.name()).add(newDataSourceParameter.desc()),
+                            (ar) -> {
+                                if (ar.failed()) {
+                                    errHandler.accept(500);
+                                    return;
+                                }
+                                UpdateResult result = ar.result();
+                                // Build a new whisky instance with the generated id.
+                                JsonObject o = new JsonObject();
+                                o.put("id", result.getKeys().getLong(0));
+
+                                responseHandler.accept(o.encode());
+                            });
+                }
+                else if(newDataSourceParameter.level().equalsIgnoreCase("dataentity")){
+                    String sql = "insert into dataentity (sname, business_desc, nid, source_id) values (?, ?,0,?)";
+                    res.result().updateWithParams(sql,
+                            new JsonArray().add(newDataSourceParameter.name()).add(newDataSourceParameter.desc()).add(newDataSourceParameter.sourceId()),
+                            (ar) -> {
+                                if (ar.failed()) {
+                                    errHandler.accept(500);
+                                    return;
+                                }
+                                UpdateResult result = ar.result();
+                                // Build a new whisky instance with the generated id.
+                                JsonObject o = new JsonObject();
+                                o.put("id", result.getKeys().getLong(0));
+
+                                responseHandler.accept(o.encode());
+                            });
+                }
+
+            }
+    });
+    }
 
     public void getEntityDetail(String entityName, Consumer<String> c) {
         if(StringUtils.isEmpty(entityName)){
@@ -86,7 +134,7 @@ public class DataBrowse implements IDataBrowse{
     }
 
     private void listDataEntities(SQLConnection conn, Long sourceID,  int pageNum, int pageSize, Consumer<Integer> errorHandler, Consumer<String> responseHandler) {
-        conn.queryWithParams("SELECT dataentity_id as id, sname as name, 'dataentity' as level, business_desc as description, 0 as newadd FROM dataentity where source_id=? LIMIT ?, ?", new JsonArray().add(sourceID).add(pageNum).add(pageSize), query -> {
+        conn.queryWithParams("SELECT dataentity_id as id, sname as name, 'dataentity' as level, business_desc as description, source_id as sourceId FROM dataentity where source_id=? LIMIT ?, ?", new JsonArray().add(sourceID).add(pageNum).add(pageSize), query -> {
             if (query.failed()) {
                 errorHandler.accept(500);
             } else {

@@ -162,6 +162,7 @@ import io.vertx.core.http.HttpServerRequest;
               );
       //router.route().handler(BodyHandler.create());
       router.get("/hierarchy").handler(this::getListHierarchy);
+      router.post("/hierarchy").handler(this::postHierarchy);
       router.post("/runner").handler(this::postSparkRunner);
 
       router.post("/postJars").handler(BodyHandler.create()
@@ -172,7 +173,9 @@ import io.vertx.core.http.HttpServerRequest;
               .setUploadsDirectory(localUploadHome));
       router.post("/postScalaFiles").handler(this::postScalaFiles);
 
-
+      router.post("/postSampleFiles").handler(BodyHandler.create()
+              .setUploadsDirectory(localUploadHome));
+      router.post("/postSampleFiles").handler(this::postSampleFiles);
 
 
       vertx.createHttpServer().requestHandler(router::accept).listen(httpPort);
@@ -198,6 +201,12 @@ import io.vertx.core.http.HttpServerRequest;
         return files;
 
     }
+
+    private void postSampleFiles(RoutingContext ctx){
+        List<String> files = getUploadedFiles(ctx);
+        LOGGER.debug(files.get(0));
+    }
+
 
     private void postScalaFiles(RoutingContext ctx){
         List<String> files = getUploadedFiles(ctx);
@@ -252,6 +261,23 @@ import io.vertx.core.http.HttpServerRequest;
     };
 
     Function<BaseRequest,Consumer<String>> currier = a -> b -> biConsumer.accept( a, b ) ;
+
+    private void postHierarchy(RoutingContext routingContext){
+        HttpServerResponse response = routingContext.response();
+        Consumer<Integer> errorHandler = i -> response.setStatusCode(i).end();
+        Consumer<String> responseHandler = s -> response.putHeader("content-type", "application/json").end(s);
+
+        routingContext.request().bodyHandler(new Handler<Buffer>() {
+            @Override
+            public void handle(Buffer buffer) {
+                LOGGER.info("buffer=" + buffer.toString());
+                BaseRequest request = gson.fromJson(buffer.toString(), BaseRequest.class);
+                NewDataSourceParameter newDataSourceParameter = (NewDataSourceParameter) request.parameter();
+
+                dataBrowse.handleUpdateHierarchy(errorHandler, responseHandler, newDataSourceParameter);
+            }
+        });
+    }
 
 
     private void postSparkRunner(RoutingContext routingContext) {
