@@ -36,7 +36,8 @@ trait IngestionParameter extends UserParameter{
 
 }
 
-case class csvIngestionParameter( override  val className: String,override  val  filePath:String, override  val tableName : String , override val templateTableName:String, override  var schema : String, hasHeader : Boolean, returnSampleSize: Integer) extends IngestionParameter
+case class SparkResponseParameter(override  val className: String, val response: String) extends UserParameter
+case class CsvIngestionParameter(override  val className: String, override  val  filePath:String, override  val tableName : String, override val templateTableName:String, override  var schema : String, hasHeader : Boolean, returnSampleSize: Integer) extends IngestionParameter
 case class xmlIngestionParameter(override  val className: String, override  val  filePath:String, override  val tableName : String , override val templateTableName:String, override  var schema : String, hasHeader : Boolean, rowTag: String, rootTag:String, returnSampleSize: Integer) extends IngestionParameter
 
 case class CopybookIngestionParameter(    //code 1

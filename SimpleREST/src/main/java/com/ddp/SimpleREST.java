@@ -16,19 +16,15 @@
 
 package com.ddp;
 
-import com.codahale.metrics.MetricRegistryListener;
 import com.ddp.access.*;
 import com.ddp.hierarchy.DataBrowse;
 import com.ddp.hierarchy.IDataBrowse;
 import com.ddp.utils.Utils;
-import com.google.common.base.Strings;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import io.netty.handler.codec.http.QueryStringDecoder;
 import io.vertx.core.*;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerResponse;
@@ -41,39 +37,24 @@ import io.vertx.ext.web.FileUpload;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.*;
 import java.util.function.BiConsumer;
-import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
 import com.ddp.util.*;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.CorsHandler;
-import io.vertx.kafka.client.consumer.KafkaConsumer;
 import io.vertx.kafka.client.producer.KafkaProducer;
 import io.vertx.kafka.client.producer.KafkaProducerRecord;
-import io.vertx.kafka.client.producer.KafkaWriteStream;
-import io.vertx.kafka.client.producer.RecordMetadata;
-import io.vertx.rxjava.kafka.client.consumer.KafkaConsumerRecord;
 import org.apache.commons.lang3.math.NumberUtils;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
-import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
-import org.quartz.JobDetail;
-import org.quartz.JobKey;
-import org.quartz.SchedulerException;
-import org.quartz.Trigger;
-import rx.Observable;
-import io.vertx.core.http.HttpServerRequest;
 
 /**
  * @author <a href="http://tfox.org">Tim Fox</a>
@@ -101,6 +82,7 @@ import io.vertx.core.http.HttpServerRequest;
     private static Gson gson = new GsonBuilder().registerTypeAdapter(UserParameter.class, userParameterDeserializer).create();
 
     private static FileSystem fs = Utils.getHdfs();
+
 
     //private EventBus eventBus;
  // public static void main(String argv[]){
@@ -181,9 +163,9 @@ import io.vertx.core.http.HttpServerRequest;
       vertx.createHttpServer().requestHandler(router::accept).listen(httpPort);
     }
 
-    private List<String>  getUploadedFiles(RoutingContext ctx){
+    private Map<String, FileUpload>  getUploadedFiles(RoutingContext ctx){
         // any number of uploads
-        List<String> files = new ArrayList<>();
+        Map<String, FileUpload> files = new HashMap<>();
         for (FileUpload f : ctx.fileUploads()) {
             // do whatever you need to do with the file (it is already saved
             // on the directory you wanted...
@@ -191,7 +173,7 @@ import io.vertx.core.http.HttpServerRequest;
             try{
                 Path p = new Path(f.uploadedFileName());
                 fs.copyFromLocalFile(p, new Path(hdfsUploadHome));
-                files.add(hdfsUploadHome + "/" + p.getName());
+                files.put(hdfsUploadHome + "/" + p.getName(), f);
             }
             catch (IOException e)
             {
@@ -203,14 +185,32 @@ import io.vertx.core.http.HttpServerRequest;
     }
 
     private void postSampleFiles(RoutingContext ctx){
-        List<String> files = getUploadedFiles(ctx);
-        LOGGER.debug(files.get(0));
+        Map<String, FileUpload> files = getUploadedFiles(ctx);
+        FileUpload file1 = files.get(files.keySet().toArray()[0]);
+        String name = file1.name();
+        String tableName=file1.fileName();
+        IngestionParameter parameter = null;
+        if(name.equalsIgnoreCase("csv")){
+            String hdfsPath = "";
+            for(String s: files.keySet()){
+                hdfsPath+= fs.getUri()+ s+",";
+            }
+
+            hdfsPath=hdfsPath.substring(0, hdfsPath.length()-1);
+
+            parameter= CsvIngestionParameter.apply("com.ddp.access.csvIngestionParameter", hdfsPath, tableName, null, null,  false, 100);
+        }
+
+        BaseRequest baseRequest = BaseRequest.apply(123, parameter, false);
+
+        sendToSpark(baseRequest);
+
     }
 
 
     private void postScalaFiles(RoutingContext ctx){
-        List<String> files = getUploadedFiles(ctx);
-        ScalaSourceParameter scalaSourceParameter = ScalaSourceParameter.apply(ScalaSourceParameter.class.getCanonicalName(), String.join(":", files));
+        Map<String, FileUpload> files = getUploadedFiles(ctx);
+        ScalaSourceParameter scalaSourceParameter = ScalaSourceParameter.apply(ScalaSourceParameter.class.getCanonicalName(), String.join(":", files.keySet()));
         Random random = new Random();
         Integer sessionKey = random.nextInt(10000);
         BaseRequest request = BaseRequest.apply(sessionKey, scalaSourceParameter,false);
@@ -227,9 +227,9 @@ import io.vertx.core.http.HttpServerRequest;
     private void postJars(RoutingContext ctx){
             // in your example you only handle 1 file upload, here you can handle
             // any number of uploads
-            List<String> jars = getUploadedFiles(ctx);
+            Map<String, FileUpload> jars = getUploadedFiles(ctx);
 
-            JarParamter jarParamter = JarParamter.apply(JarParamter.class.getCanonicalName(), String.join(":", jars));
+            JarParamter jarParamter = JarParamter.apply(JarParamter.class.getCanonicalName(), String.join(":", jars.keySet()));
 
             Random random = new Random();
             Integer sessionKey = random.nextInt(10000);
@@ -279,6 +279,11 @@ import io.vertx.core.http.HttpServerRequest;
         });
     }
 
+    private void postSparkRunnerCustomRequest(RoutingContext routingContext){
+        HttpServerResponse response = routingContext.response();
+        Consumer<Integer> errorHandler = i -> response.setStatusCode(i).end();
+        Consumer<String> responseHandler = s -> response.putHeader("content-type", "application/json").end(s);
+    }
 
     private void postSparkRunner(RoutingContext routingContext) {
         // Custom message
@@ -295,7 +300,7 @@ import io.vertx.core.http.HttpServerRequest;
 
                 if (request.needPadding()) {
                     String className = request.parameter().className();
-                    if (className.equals(csvIngestionParameter.class.getCanonicalName()) ||
+                    if (className.equals(CsvIngestionParameter.class.getCanonicalName()) ||
                             className.equals(xmlIngestionParameter.class.getCanonicalName())) {
                         IngestionParameter parameter = (IngestionParameter) request.parameter();
                         Consumer curried = currier.apply(request);

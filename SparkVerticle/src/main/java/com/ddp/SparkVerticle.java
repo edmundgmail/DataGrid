@@ -4,12 +4,10 @@ import com.ddp.access.*;
 import com.ddp.cpybook.CopybookIngestion;
 import com.ddp.ingestion.FileIngestionEngine;
 import com.ddp.jarmanager.JarLoader;
-import com.ddp.jarmanager.JarLoader$;
 import com.ddp.jarmanager.ScalaSourceCompiiler;
 import com.ddp.userclass.Query;
 import com.ddp.userclass.RunUserClass;
 import com.ddp.util.*;
-import com.ddp.utils.Utils;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import io.vertx.core.AbstractVerticle;
@@ -17,33 +15,22 @@ import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.kafka.client.producer.KafkaProducerRecord;
-import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.kafka.clients.consumer.*;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.spark.SparkConf;
 import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.SQLContext;
-import org.apache.spark.sql.types.*;
 
 import java.io.File;
-import java.lang.reflect.Method;
-import java.net.URL;
-import java.net.URLClassLoader;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Properties;
 
 import static com.ddp.util.ClassUtils.findClass;
-import static com.sun.tools.classfile.AccessFlags.Kind.Field;
 
-import org.apache.spark.sql.types.*;
 import org.xeustechnologies.jcl.JarClassLoader;
 import org.xeustechnologies.jcl.JclObjectFactory;
 
@@ -237,10 +224,7 @@ public class SparkVerticle extends AbstractVerticle{
                 if(record.value()!=null && record.value().sessionKey()!=0 && record.value().parameter()!=null){
                     LOG.info(record.value());
                     handleEvent(record.value());
-                    BaseRequest request = new BaseRequest(456, null,false);
 
-                    KafkaProducerRecord<String, BaseRequest> feedback = KafkaProducerRecord.create(producerTopic, request);
-                    producer.write(feedback);
                 }
                 ;
             }catch (Exception e)
@@ -274,16 +258,23 @@ public class SparkVerticle extends AbstractVerticle{
                 System.out.println("The result is: " + res.result());
             });
         }
-        else if(msg.parameter().className().equals(csvIngestionParameter.class.getCanonicalName())){
-            csvIngestionParameter a = (csvIngestionParameter)msg.parameter();
+        else if(msg.parameter().className().equals(CsvIngestionParameter.class.getCanonicalName())){
+            CsvIngestionParameter a = (CsvIngestionParameter)msg.parameter();
 
             vertx.executeBlocking(future -> {
                 // Call some blocking API that takes a significant amount of time to return
                 //StructType schema = buildStructType(a.schema());
                 Object result = fileIngestionEngine.ingestCsv(a);
+                System.out.println("object result=" + result);
                 future.complete(formatResult(msg,result));
             }, res -> {
                 System.out.println("The result is: " + res.result());
+
+                UserParameter parameter = SparkResponseParameter.apply("com.ddp.access.SparkResponseParameter", res.result().toString());
+                BaseRequest request = new BaseRequest(456, parameter,false);
+
+                KafkaProducerRecord<String, BaseRequest> feedback = KafkaProducerRecord.create(producerTopic, request);
+                producer.write(feedback);
             });
 
         }

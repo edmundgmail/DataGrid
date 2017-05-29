@@ -1,6 +1,6 @@
 package com.ddp.ingestion
 
-import com.ddp.access.{csvIngestionParameter, xmlIngestionParameter}
+import com.ddp.access.{CsvIngestionParameter, xmlIngestionParameter}
 import com.ddp.utils.Utils
 import com.google.gson.Gson
 import org.apache.spark.sql.SQLContext
@@ -14,7 +14,7 @@ case class MetaObject(sname : String)
 
 case class FileIngestionEngine (sqlContext : SQLContext){
 
-  def ingestCsv(fileIngestionParameter: csvIngestionParameter): Any ={
+  def ingestCsv(fileIngestionParameter: CsvIngestionParameter): Any ={
 
     val tempView = fileIngestionParameter.tableName + Utils.getRandom
     val option = if(fileIngestionParameter.hasHeader) "true" else "false"
@@ -28,15 +28,19 @@ case class FileIngestionEngine (sqlContext : SQLContext){
         .load(fileIngestionParameter.filePath)
         .createOrReplaceTempView(tempView)
 
-      sqlContext.sql("CREATE TABLE " + fileIngestionParameter.tableName + " SELECT * FROM " + tempView ).show(10)
+      sqlContext.sql("CREATE TABLE " + fileIngestionParameter.tableName + " SELECT * FROM " + tempView )
 
     }else{
       val sql = "CREATE TABLE " + fileIngestionParameter.tableName + " USING com.databricks.spark.csv OPTIONS (path \"" + fileIngestionParameter.filePath + "\", header \"true\", inferSchema \"true\")"
-      sqlContext.sql(sql).show(10)
+      sqlContext.sql(sql)
     }
 
-    if(fileIngestionParameter.returnSampleSize>0)
-      return sqlContext.sql("SELECT * FROM " + fileIngestionParameter.tableName + " limit " + fileIngestionParameter.returnSampleSize)
+    if(fileIngestionParameter.returnSampleSize>0){
+      val df = sqlContext.sql("SELECT * FROM " + fileIngestionParameter.tableName + " limit " + fileIngestionParameter.returnSampleSize)
+      df.show(fileIngestionParameter.returnSampleSize)
+      return df.take(fileIngestionParameter.returnSampleSize)
+
+    }
   }
 
    def ingestXml(fileIngestionParameter: xmlIngestionParameter): Any ={
@@ -54,7 +58,7 @@ case class FileIngestionEngine (sqlContext : SQLContext){
          .load(fileIngestionParameter.filePath)
          .createOrReplaceTempView(tempView)
 
-       sqlContext.sql("CREATE TABLE " + fileIngestionParameter.tableName + " SELECT * FROM " + tempView ).show(10)
+       sqlContext.sql("CREATE TABLE " + fileIngestionParameter.tableName + " SELECT * FROM " + tempView )
 
      }else{
      val sql = "CREATE TABLE " + fileIngestionParameter.tableName + " USING com.databricks.spark.xml OPTIONS (path \"" + fileIngestionParameter.filePath +
