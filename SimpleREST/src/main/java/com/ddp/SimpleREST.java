@@ -198,7 +198,7 @@ import org.apache.kafka.common.serialization.StringSerializer;
 
             hdfsPath=hdfsPath.substring(0, hdfsPath.length()-1);
 
-            parameter= CsvIngestionParameter.apply("com.ddp.access.csvIngestionParameter", hdfsPath, tableName, null, null,  false, 100);
+            parameter= CsvIngestionParameter.apply(CsvIngestionParameter.class.getCanonicalName(), hdfsPath, tableName, null, null,  false, 100);
         }
 
         BaseRequest baseRequest = BaseRequest.apply(123, parameter, false);

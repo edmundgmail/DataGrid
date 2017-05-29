@@ -2,7 +2,7 @@ package com.ddp.ingestion
 
 import com.ddp.access.{CsvIngestionParameter, xmlIngestionParameter}
 import com.ddp.utils.Utils
-import com.google.gson.Gson
+import com.google.gson.{Gson, GsonBuilder}
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.types.{DataTypes, StructField, StructType}
 import org.json4s.jackson.Json
@@ -13,6 +13,8 @@ import org.json4s.jackson.Json
 case class MetaObject(sname : String)
 
 case class FileIngestionEngine (sqlContext : SQLContext){
+
+  private val gson = new GsonBuilder().create()
 
   def ingestCsv(fileIngestionParameter: CsvIngestionParameter): Any ={
 
@@ -38,8 +40,7 @@ case class FileIngestionEngine (sqlContext : SQLContext){
     if(fileIngestionParameter.returnSampleSize>0){
       val df = sqlContext.sql("SELECT * FROM " + fileIngestionParameter.tableName + " limit " + fileIngestionParameter.returnSampleSize)
       df.show(fileIngestionParameter.returnSampleSize)
-      return df.take(fileIngestionParameter.returnSampleSize)
-
+      return gson.toJson(df.toJSON.take(fileIngestionParameter.returnSampleSize))
     }
   }
 

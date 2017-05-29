@@ -31,6 +31,7 @@ import java.util.Properties;
 
 import static com.ddp.util.ClassUtils.findClass;
 
+import org.datanucleus.util.StringUtils;
 import org.xeustechnologies.jcl.JarClassLoader;
 import org.xeustechnologies.jcl.JclObjectFactory;
 
@@ -265,13 +266,15 @@ public class SparkVerticle extends AbstractVerticle{
                 // Call some blocking API that takes a significant amount of time to return
                 //StructType schema = buildStructType(a.schema());
                 Object result = fileIngestionEngine.ingestCsv(a);
-                System.out.println("object result=" + result);
-                future.complete(formatResult(msg,result));
+                future.complete(result);
             }, res -> {
                 System.out.println("The result is: " + res.result());
-
-                UserParameter parameter = SparkResponseParameter.apply("com.ddp.access.SparkResponseParameter", res.result().toString());
-                BaseRequest request = new BaseRequest(456, parameter,false);
+                String response = "";
+                if(res.result()!=null){
+                    response = res.result().toString();
+                }
+                UserParameter parameter = SparkResponseParameter.apply(SparkResponseParameter.class.getCanonicalName(), response);
+                BaseRequest request = new BaseRequest(msg.sessionKey(), parameter,false);
 
                 KafkaProducerRecord<String, BaseRequest> feedback = KafkaProducerRecord.create(producerTopic, request);
                 producer.write(feedback);
