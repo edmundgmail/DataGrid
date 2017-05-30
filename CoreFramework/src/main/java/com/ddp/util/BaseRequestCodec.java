@@ -1,7 +1,9 @@
 package com.ddp.util;
 
 import com.ddp.access.BaseRequest;
+import com.ddp.access.UserParameter;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.MessageCodec;
 import io.vertx.core.json.JsonObject;
@@ -11,11 +13,14 @@ import io.vertx.core.json.JsonObject;
  * @author Junbong
  */
 public class BaseRequestCodec implements MessageCodec<BaseRequest, BaseRequest> {
-  private static Gson gson = new Gson();
+  private UserParameterDeserializer userParameterDeserializer = UserParameterDeserializer.getInstance();
+  private Gson gsonDe = new GsonBuilder().registerTypeAdapter(UserParameter.class, userParameterDeserializer).create();
+
+  private Gson gsonSer = new Gson();
   @Override
   public void encodeToWire(Buffer buffer, BaseRequest customMessage) {
     // Encode object to string
-    String jsonToStr = gson.toJson(customMessage);
+    String jsonToStr = gsonSer.toJson(customMessage);
 
     // Length of JSON: is NOT characters count
     int length = jsonToStr.getBytes().length;
@@ -38,7 +43,7 @@ public class BaseRequestCodec implements MessageCodec<BaseRequest, BaseRequest> 
     String jsonStr = buffer.getString(_pos+=4, _pos+=length);
 
     // We can finally create custom message object
-    return gson.fromJson(jsonStr, BaseRequest.class);
+    return gsonDe.fromJson(jsonStr, BaseRequest.class);
   }
 
   @Override

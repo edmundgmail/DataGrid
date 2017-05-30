@@ -15,14 +15,11 @@ import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.eventbus.EventBus;
+import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
-import io.vertx.kafka.client.producer.KafkaProducerRecord;
-import org.apache.kafka.clients.consumer.*;
-import org.apache.kafka.clients.producer.ProducerConfig;
-import org.apache.kafka.common.serialization.StringDeserializer;
-import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.spark.SparkConf;
 import org.apache.spark.sql.SparkSession;
 
@@ -42,18 +39,8 @@ import org.xeustechnologies.jcl.JclObjectFactory;
 public class SparkVerticle extends AbstractVerticle{
 
     private static Logger LOG = LoggerFactory.getLogger("SparkVerticle");
-
-
-    private static io.vertx.kafka.client.consumer.KafkaConsumer<String, BaseRequest> consumer;
-    private static io.vertx.kafka.client.producer.KafkaProducer<String, BaseRequest> producer;
-
     private static String sparkAppName;
     private static String sparkMaster;
-    private static String consumerTopic;
-    private static String producerTopic;
-    private static String kafkaBrokers;
-    private static String groupId;
-
     private static ScalaSourceCompiiler scalaSourceCompiiler;
     private static JarLoader jarLoader;
     private static RunUserClass runUserClass;
@@ -71,10 +58,7 @@ public class SparkVerticle extends AbstractVerticle{
     private static void initConfig(JsonObject js){
         sparkAppName = js.getString("spark.appname");
         sparkMaster = js.getString("spark.master");
-        consumerTopic = js.getString("in.topic");
-        producerTopic = js.getString("out.topic");
-        kafkaBrokers = js.getString("kafka.brokers");
-        groupId = js.getString("group.id");
+
     }
 
     private static  boolean hiveClassesArePresent() {
@@ -155,34 +139,6 @@ public class SparkVerticle extends AbstractVerticle{
         return sparkSession;
     }
 
-    private static io.vertx.kafka.client.consumer.KafkaConsumer<String, BaseRequest> createConsumerJava(Vertx vertx) {
-        // creating the consumer using properties config
-        Properties config = new Properties();
-        config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaBrokers);
-        config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-        config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, BaseRequestDeserializer.class);
-        config.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
-        config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
-        config.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "true");
-
-        // use consumer for interacting with Apache Kafka
-        io.vertx.kafka.client.consumer.KafkaConsumer<String, BaseRequest> consumer = io.vertx.kafka.client.consumer.KafkaConsumer.create(vertx, config);
-        return consumer;
-    }
-
-    private static io.vertx.kafka.client.producer.KafkaProducer<String, BaseRequest> createProducerJava(Vertx vertx) {
-        // creating the producer using map and class types for key and value serializers/deserializers
-        Properties config = new Properties();
-        config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaBrokers);
-        config.put(ProducerConfig.ACKS_CONFIG, "1");
-        config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-        config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, com.ddp.util.BaseRequestSerializer.class);
-
-        // use producer for interacting with Apache Kafka
-        io.vertx.kafka.client.producer.KafkaProducer<String, BaseRequest> producer = io.vertx.kafka.client.producer.KafkaProducer.create(vertx, config, String.class, BaseRequest.class);
-        return producer;
-    }
-
     public static void main(String argv[]) {
         //DeploymentOptions deploymentOptions = new DeploymentOptions().setConfig(js).setMaxWorkerExecuteTime(5000).setWorker(true).setWorkerPoolSize(30);
 
@@ -217,15 +173,17 @@ public class SparkVerticle extends AbstractVerticle{
         sparkSession = (SparkSession) createSparkSession();
         createEngines();
 
-        consumer = createConsumerJava(vertx);
-        producer = createProducerJava(vertx);
+        EventBus eventBus = getVertx().eventBus();
+        eventBus.registerDefaultCodec(BaseRequest.class, new BaseRequestCodec());
 
-        consumer.handler(record -> {
+        eventBus.consumer("cluster-message-receiver", message -> {
+
+            BaseRequest record = (BaseRequest) message.body();
+
             try {
-                if(record.value()!=null && record.value().sessionKey()!=0 && record.value().parameter()!=null){
-                    LOG.info(record.value());
-                    handleEvent(record.value());
-
+                if(record!=null && record.sessionKey()!=0 && record.parameter()!=null){
+                    LOG.info(record);
+                    handleEvent(message);
                 }
                 ;
             }catch (Exception e)
@@ -233,9 +191,6 @@ public class SparkVerticle extends AbstractVerticle{
                 e.printStackTrace();
             }
         });
-
-
-        consumer.subscribe(consumerTopic);
     }
 
     private JsonObject formatResult(BaseRequest request, Object result){
@@ -245,7 +200,8 @@ public class SparkVerticle extends AbstractVerticle{
         return ret;
     }
 
-    private void handleEvent(BaseRequest msg) {
+    private void handleEvent(Message message) {
+        BaseRequest msg = (BaseRequest) message.body();
         SparkSession spark = (SparkSession) sparkSession;
 
         if (msg.parameter().className().equals(CopybookIngestionParameter.class.getCanonicalName())) {
@@ -269,15 +225,10 @@ public class SparkVerticle extends AbstractVerticle{
                 future.complete(result);
             }, res -> {
                 System.out.println("The result is: " + res.result());
-                String response = "";
-                if(res.result()!=null){
-                    response = res.result().toString();
-                }
-                UserParameter parameter = SparkResponseParameter.apply(SparkResponseParameter.class.getCanonicalName(), response);
-                BaseRequest request = new BaseRequest(msg.sessionKey(), parameter,false);
 
-                KafkaProducerRecord<String, BaseRequest> feedback = KafkaProducerRecord.create(producerTopic, request);
-                producer.write(feedback);
+                UserParameter parameter = SparkResponseParameter.apply(SparkResponseParameter.class.getCanonicalName(), res.result().toString());
+                BaseRequest request = new BaseRequest(msg.sessionKey(), parameter,false);
+                message.reply(request);
             });
 
         }

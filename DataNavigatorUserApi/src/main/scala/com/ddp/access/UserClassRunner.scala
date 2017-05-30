@@ -1,10 +1,13 @@
 package com.ddp.access
 
+import java.util.function.Consumer
 
 trait UserParameter {
 	val className:String
 }
 
+
+case class BaseConsumer(val baseRequest: BaseRequest, val responseHandler : Consumer[String])
 case class BaseRequest(sessionKey : Long,  parameter: UserParameter, needPadding: Boolean = false)
 
 case class NewDataSourceParameter(override val className:String, level: String, name: String, desc: String, sourceId:Long) extends UserParameter

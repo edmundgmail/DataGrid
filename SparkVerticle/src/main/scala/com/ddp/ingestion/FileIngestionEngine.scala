@@ -3,6 +3,7 @@ package com.ddp.ingestion
 import com.ddp.access.{CsvIngestionParameter, xmlIngestionParameter}
 import com.ddp.utils.Utils
 import com.google.gson.{Gson, GsonBuilder}
+import io.vertx.core.json.JsonObject
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.types.{DataTypes, StructField, StructType}
 import org.json4s.jackson.Json
@@ -42,6 +43,10 @@ case class FileIngestionEngine (sqlContext : SQLContext){
       df.show(fileIngestionParameter.returnSampleSize)
       return gson.toJson(df.toJSON.take(fileIngestionParameter.returnSampleSize))
     }
+    else
+      {
+        return new JsonObject().encode()
+      }
   }
 
    def ingestXml(fileIngestionParameter: xmlIngestionParameter): Any ={

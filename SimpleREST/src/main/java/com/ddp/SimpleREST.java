@@ -46,15 +46,10 @@ import java.util.function.Function;
 import com.ddp.util.*;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.CorsHandler;
-import io.vertx.kafka.client.producer.KafkaProducer;
-import io.vertx.kafka.client.producer.KafkaProducerRecord;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.clients.producer.ProducerConfig;
-import org.apache.kafka.common.serialization.StringDeserializer;
-import org.apache.kafka.common.serialization.StringSerializer;
+
 
 /**
  * @author <a href="http://tfox.org">Tim Fox</a>
@@ -64,12 +59,6 @@ import org.apache.kafka.common.serialization.StringSerializer;
   private Logger LOGGER = LoggerFactory.getLogger("SimpleREST");
   private JDBCClient client;
 
-  private static KafkaProducer<String, BaseRequest> producer;
-  private static io.vertx.kafka.client.consumer.KafkaConsumer<String, BaseRequest> consumer;
-  private static String consumerTopic;
-  private static String producerTopic;
-  private static String kafkaBrokers;
-  private static String groupId;
   private static String hdfsUploadHome;
   private static String localUploadHome;
     private static Integer httpPort;
@@ -77,26 +66,16 @@ import org.apache.kafka.common.serialization.StringSerializer;
     private static String sqlUrl;
     private static String toScheduleEvent;
     private static EventBus eventBus;
-
     private static UserParameterDeserializer userParameterDeserializer = UserParameterDeserializer.getInstance();
     private static Gson gson = new GsonBuilder().registerTypeAdapter(UserParameter.class, userParameterDeserializer).create();
 
     private static FileSystem fs = Utils.getHdfs();
 
 
-    //private EventBus eventBus;
- // public static void main(String argv[]){
-        //Runner.runExample(SimpleREST.class);
-    //}
-
     private static void initConfig(JsonObject js){
         httpPort = js.getInteger("http.port");
         sqlDriverClass = js.getString("driver.class");
         sqlUrl = js.getString("sql.url");
-        consumerTopic = js.getString("in.topic");
-        producerTopic = js.getString("out.topic");
-        kafkaBrokers = js.getString("kafka.brokers");
-        groupId = js.getString("group.id");
         localUploadHome =js.getString("local.upload.home");
         hdfsUploadHome =js.getString("hdfs.upload.home");
         toScheduleEvent = js.getString("eventbus.schedverticle");
@@ -161,6 +140,22 @@ import org.apache.kafka.common.serialization.StringSerializer;
 
 
       vertx.createHttpServer().requestHandler(router::accept).listen(httpPort);
+
+      eventBus = getVertx().eventBus();
+      eventBus.registerDefaultCodec(BaseRequest.class, new BaseRequestCodec());
+
+      // Custom message
+      UserParameter parameter = SparkResponseParameter.apply(SparkResponseParameter.class.getCanonicalName(), "Test");
+      BaseRequest request = BaseRequest.apply(123, parameter, false);
+      // Send a message to [cluster receiver] every second
+          eventBus.send("cluster-message-receiver", request, reply -> {
+              if (reply.succeeded()) {
+                  BaseRequest replyMessage = (BaseRequest) reply.result().body();
+                  System.out.println("Received reply: "+replyMessage.parameter());
+              } else {
+                  System.out.println("No reply from cluster receiver");
+              }
+          });
     }
 
     private Map<String, FileUpload>  getUploadedFiles(RoutingContext ctx){
@@ -185,7 +180,12 @@ import org.apache.kafka.common.serialization.StringSerializer;
     }
 
     private void postSampleFiles(RoutingContext ctx){
+        HttpServerResponse response = ctx.response();
+        Consumer<Integer> errorHandler = i -> response.setStatusCode(i).end();
+        Consumer<String> responseHandler = s -> response.putHeader("content-type", "application/json").end(s);
+
         Map<String, FileUpload> files = getUploadedFiles(ctx);
+
         FileUpload file1 = files.get(files.keySet().toArray()[0]);
         String name = file1.name();
         String tableName=file1.fileName();
@@ -203,12 +203,16 @@ import org.apache.kafka.common.serialization.StringSerializer;
 
         BaseRequest baseRequest = BaseRequest.apply(123, parameter, false);
 
-        sendToSpark(baseRequest);
+        sendToSpark(BaseConsumer.apply(baseRequest, responseHandler));
 
     }
 
 
     private void postScalaFiles(RoutingContext ctx){
+        HttpServerResponse response = ctx.response();
+        Consumer<Integer> errorHandler = i -> response.setStatusCode(i).end();
+        Consumer<String> responseHandler = s -> response.putHeader("content-type", "application/json").end(s);
+
         Map<String, FileUpload> files = getUploadedFiles(ctx);
         ScalaSourceParameter scalaSourceParameter = ScalaSourceParameter.apply(ScalaSourceParameter.class.getCanonicalName(), String.join(":", files.keySet()));
         Random random = new Random();
@@ -216,16 +220,15 @@ import org.apache.kafka.common.serialization.StringSerializer;
         BaseRequest request = BaseRequest.apply(sessionKey, scalaSourceParameter,false);
 
         LOGGER.info("request=" + request);
-
-        KafkaProducerRecord<String, BaseRequest> record = KafkaProducerRecord.create(producerTopic, request);
-        producer.write(record, done -> {
-            System.out.println("Message " + record.value()+ done.toString());
-            ctx.response().end();
-        });
+        sendToSpark(BaseConsumer.apply(request, responseHandler));
     }
 
     private void postJars(RoutingContext ctx){
-            // in your example you only handle 1 file upload, here you can handle
+        HttpServerResponse response = ctx.response();
+        Consumer<Integer> errorHandler = i -> response.setStatusCode(i).end();
+        Consumer<String> responseHandler = s -> response.putHeader("content-type", "application/json").end(s);
+
+        // in your example you only handle 1 file upload, here you can handle
             // any number of uploads
             Map<String, FileUpload> jars = getUploadedFiles(ctx);
 
@@ -237,30 +240,29 @@ import org.apache.kafka.common.serialization.StringSerializer;
 
             LOGGER.info("request=" + request);
 
-            KafkaProducerRecord<String, BaseRequest> record = KafkaProducerRecord.create(producerTopic, request);
-
-            producer.write(record, done -> {
-                System.out.println("Message " + record.value()+ done.toString());
-                ctx.response().end();
-            });
+            sendToSpark(BaseConsumer.apply(request, responseHandler));
     }
 
 
-    private static void sendToSpark(BaseRequest request){
-        KafkaProducerRecord<String, BaseRequest> record = KafkaProducerRecord.create(producerTopic, request);
-        producer.write(record, done -> {
-            System.out.println("Message " + record.value()+ done.toString());
-
+    private static void sendToSpark(BaseConsumer baseConsumer ){
+        eventBus.send("cluster-message-receiver", baseConsumer.baseRequest(), reply -> {
+            if (reply.succeeded()) {
+                BaseRequest replyMessage = (BaseRequest) reply.result().body();
+                baseConsumer.responseHandler().accept(reply.result().body().toString());
+                System.out.println("Received reply: "+replyMessage.parameter());
+            } else {
+                System.out.println("No reply from cluster receiver");
+            }
         });
     }
 
-    BiConsumer<BaseRequest, String> biConsumer = (request, padding)-> {
-        IngestionParameter parameter = (IngestionParameter) request.parameter();
+    BiConsumer<BaseConsumer, String> biConsumer = (request, padding)-> {
+        IngestionParameter parameter = (IngestionParameter) request.baseRequest().parameter();
         parameter.updateSchema(padding);
         sendToSpark(request);
     };
 
-    Function<BaseRequest,Consumer<String>> currier = a -> b -> biConsumer.accept( a, b ) ;
+    Function<BaseConsumer,Consumer<String>> currier = a -> b -> biConsumer.accept( a, b ) ;
 
     private void postHierarchy(RoutingContext routingContext){
         HttpServerResponse response = routingContext.response();
@@ -303,18 +305,13 @@ import org.apache.kafka.common.serialization.StringSerializer;
                     if (className.equals(CsvIngestionParameter.class.getCanonicalName()) ||
                             className.equals(xmlIngestionParameter.class.getCanonicalName())) {
                         IngestionParameter parameter = (IngestionParameter) request.parameter();
-                        Consumer curried = currier.apply(request);
+                        Consumer curried = currier.apply(BaseConsumer.apply(request, responseHandler));
                         dataBrowse.getEntityDetail(parameter.templateTableName(), curried);
                     }
                 }
                 else {
-                    sendToSpark(request);
+                    sendToSpark(BaseConsumer.apply(request, responseHandler));
                 }
-
-                JsonObject o = new JsonObject();
-                o.put("sessionKey", request.sessionKey());
-                o.put("result", "Submitted");
-                responseHandler.accept(o.encode());
             }
         });
     }
@@ -333,40 +330,7 @@ import org.apache.kafka.common.serialization.StringSerializer;
 
 }
 
-    private static  io.vertx.kafka.client.consumer.KafkaConsumer<String, BaseRequest> createConsumerJava(Vertx vertx) {
-
-        // creating the consumer using properties config
-        Properties config = new Properties();
-        config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,kafkaBrokers);
-        config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-        config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, BaseRequestDeserializer.class);
-        config.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
-        config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-        config.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
-
-        // use consumer for interacting with Apache Kafka
-        io.vertx.kafka.client.consumer.KafkaConsumer<String, BaseRequest> consumer = io.vertx.kafka.client.consumer.KafkaConsumer.create(vertx, config);
-        return consumer;
-    }
-
-    private  static KafkaProducer<String, BaseRequest> createProducerJava(Vertx vertx) {
-
-        // creating the producer using map and class types for key and value serializers/deserializers
-        Properties config = new Properties();
-        config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,kafkaBrokers);
-        config.put(ProducerConfig.ACKS_CONFIG, "1");
-        config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-        config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, com.ddp.util.BaseRequestSerializer.class);
-
-        // use producer for interacting with Apache Kafka
-        KafkaProducer<String, BaseRequest> producer = KafkaProducer.create(vertx, config, String.class, BaseRequest.class);
-        return producer;
-    }
-
-
     private void setUpInitialData() {
-     eventBus = getVertx().eventBus();
-     eventBus.registerDefaultCodec(BaseRequest.class, new BaseRequestCodec());
 
      final JDBCClient client = JDBCClient.createShared(vertx, new JsonObject()
              .put("url", sqlUrl)
@@ -374,18 +338,6 @@ import org.apache.kafka.common.serialization.StringSerializer;
              .put("max_pool_size", 30));
 
      dataBrowse = new DataBrowse(client);
-     producer = createProducerJava(vertx);
-     consumer = createConsumerJava(vertx);
-        consumer.handler(record -> {
-            try {
-                LOGGER.info(record.value());
-                LOGGER.info(record.key());
-            }catch (Exception e)
-            {
-                e.printStackTrace();
-            }
-        });
-        consumer.subscribe(consumerTopic);
 
      //eventBus = getVertx().eventBus();
      //eventBus.registerDefaultCodec(CustomMessage.class, new CustomMessageCodec());
