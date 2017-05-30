@@ -224,9 +224,14 @@ public class SparkVerticle extends AbstractVerticle{
                 Object result = fileIngestionEngine.ingestCsv(a);
                 future.complete(result);
             }, res -> {
-                System.out.println("The result is: " + res.result());
-
-                UserParameter parameter = SparkResponseParameter.apply(SparkResponseParameter.class.getCanonicalName(), res.result().toString());
+                String s ;
+                if(res.succeeded()){
+                    s = res.result().toString();
+                }
+                else {
+                    s = new JsonObject().encode();
+                }
+                UserParameter parameter = SparkResponseParameter.apply(SparkResponseParameter.class.getCanonicalName(), s);
                 BaseRequest request = new BaseRequest(msg.sessionKey(), parameter,false);
                 message.reply(request);
             });

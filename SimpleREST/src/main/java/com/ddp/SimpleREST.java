@@ -144,18 +144,6 @@ import org.apache.hadoop.fs.Path;
       eventBus = getVertx().eventBus();
       eventBus.registerDefaultCodec(BaseRequest.class, new BaseRequestCodec());
 
-      // Custom message
-      UserParameter parameter = SparkResponseParameter.apply(SparkResponseParameter.class.getCanonicalName(), "Test");
-      BaseRequest request = BaseRequest.apply(123, parameter, false);
-      // Send a message to [cluster receiver] every second
-          eventBus.send("cluster-message-receiver", request, reply -> {
-              if (reply.succeeded()) {
-                  BaseRequest replyMessage = (BaseRequest) reply.result().body();
-                  System.out.println("Received reply: "+replyMessage.parameter());
-              } else {
-                  System.out.println("No reply from cluster receiver");
-              }
-          });
     }
 
     private Map<String, FileUpload>  getUploadedFiles(RoutingContext ctx){
@@ -248,7 +236,7 @@ import org.apache.hadoop.fs.Path;
         eventBus.send("cluster-message-receiver", baseConsumer.baseRequest(), reply -> {
             if (reply.succeeded()) {
                 BaseRequest replyMessage = (BaseRequest) reply.result().body();
-                baseConsumer.responseHandler().accept(reply.result().body().toString());
+                baseConsumer.responseHandler().accept(replyMessage.parameter().toString());
                 System.out.println("Received reply: "+replyMessage.parameter());
             } else {
                 System.out.println("No reply from cluster receiver");
