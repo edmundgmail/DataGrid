@@ -7,6 +7,8 @@ trait UserParameter {
 }
 
 
+case class HiveHierarchyParameter (override val className: String, val level: String, val sname: String) extends UserParameter
+
 case class BaseConsumer(val baseRequest: BaseRequest, val responseHandler : Consumer[String])
 case class BaseRequest(sessionKey : Long,  parameter: UserParameter, needPadding: Boolean = false)
 

@@ -126,6 +126,7 @@ import org.apache.hadoop.fs.Path;
       router.post("/hierarchy").handler(this::postHierarchy);
       router.post("/runner").handler(this::postSparkRunner);
 
+      router.get("/hiveHierarchy").handler(this::getHiveHierarchy);
       router.post("/postJars").handler(BodyHandler.create()
               .setUploadsDirectory(localUploadHome));
       router.post("/postJars").handler(this::postJars);
@@ -302,6 +303,22 @@ import org.apache.hadoop.fs.Path;
                 }
             }
         });
+    }
+
+
+    private void getHiveHierarchy(RoutingContext routingContext){
+        HttpServerResponse response = routingContext.response();
+        Consumer<Integer> errorHandler = i-> response.setStatusCode(i).end();
+        Consumer<String> responseHandler = s-> response.putHeader("content-type", "application/json").end(s);
+
+        String level = routingContext.request().getParam("level");
+        String name = routingContext.request().getParam("name");
+
+        UserParameter parameter = HiveHierarchyParameter.apply(HiveHierarchyParameter.class.getCanonicalName(), level, name);
+        BaseRequest request = BaseRequest.apply(123, parameter, false);
+        BaseConsumer consumer = BaseConsumer.apply(request, responseHandler);
+        sendToSpark(consumer);
+
     }
 
     private void getListHierarchy(RoutingContext routingContext){

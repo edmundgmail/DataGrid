@@ -18,10 +18,25 @@ case class FileIngestionEngine (sqlContext : SQLContext){
   private val gson = new GsonBuilder().create()
 
   def ingestCsv(fileIngestionParameter: CsvIngestionParameter): Any = {
-      val tempView = fileIngestionParameter.tableName + Utils.getRandom
       val option = if (fileIngestionParameter.hasHeader) "true" else "false"
-      if (fileIngestionParameter.schema != null && !fileIngestionParameter.schema.isEmpty) {
-        val s = new Gson().fromJson(fileIngestionParameter.schema, classOf[Array[MetaObject]])
+      val parts = fileIngestionParameter.tableName.split("\\.")
+
+    try{
+      sqlContext.sql("CREATE DATABASE IF NOT EXISTS " + parts(0))
+    }
+    catch {
+      case e : Throwable=> {
+        e.printStackTrace()
+        println(" error = ", e)
+      }
+    }
+
+      sqlContext.sql("USE " + parts(0))
+      sqlContext.sql("DROP TABLE IF EXISTS " + parts(1))
+
+    if (fileIngestionParameter.schema != null && !fileIngestionParameter.schema.isEmpty) {
+      val tempView = parts(1)+Utils.getRandom
+      val s = new Gson().fromJson(fileIngestionParameter.schema, classOf[Array[MetaObject]])
         val schema = StructType(s.map(f => new StructField(f.sname, DataTypes.StringType, true)))
         val df = sqlContext.read
           .format("com.databricks.spark.csv")
@@ -30,18 +45,21 @@ case class FileIngestionEngine (sqlContext : SQLContext){
           .load(fileIngestionParameter.filePath)
           .createOrReplaceTempView(tempView)
 
-        sqlContext.sql("CREATE TABLE " + fileIngestionParameter.tableName + " SELECT * FROM " + tempView)
+        sqlContext.sql("CREATE TABLE " + parts(1) + " SELECT * FROM " + tempView)
 
       } else {
-        val sql = "CREATE TABLE " + fileIngestionParameter.tableName + " USING com.databricks.spark.csv OPTIONS (path \"" + fileIngestionParameter.filePath + "\", header \"true\", inferSchema \"true\")"
+        val sql = "CREATE TABLE " + parts(1) + " USING com.databricks.spark.csv OPTIONS (path \"" + fileIngestionParameter.filePath + "\", header \"true\", inferSchema \"true\")"
         sqlContext.sql(sql)
       }
 
       val limit: Integer = if (fileIngestionParameter.returnSampleSize == 0) 100 else fileIngestionParameter.returnSampleSize
 
-      val df = sqlContext.sql("SELECT * FROM " + fileIngestionParameter.tableName + " limit " + limit)
+      val df = sqlContext.sql("SELECT * FROM " + parts(1) + " limit " + limit)
 
-      gson.toJson(df.toJSON.take(limit))
+      df.toJSON.take(limit).foreach(println)
+
+      val ret= df.toJSON.take(limit).mkString(",")
+    ret
   }
 
    def ingestXml(fileIngestionParameter: xmlIngestionParameter): Any ={

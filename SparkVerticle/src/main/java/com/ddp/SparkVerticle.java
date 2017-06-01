@@ -17,6 +17,7 @@ import io.vertx.core.VertxOptions;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.Message;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -204,6 +205,14 @@ public class SparkVerticle extends AbstractVerticle{
         BaseRequest msg = (BaseRequest) message.body();
         SparkSession spark = (SparkSession) sparkSession;
 
+        if(msg.parameter().className().equals(HiveHierarchyParameter.class.getCanonicalName())){
+            HiveHierarchyParameter parameter = (HiveHierarchyParameter)msg.parameter();
+            vertx.executeBlocking(future -> {
+
+            }, res->{
+                System.out.println("The result is: " + res.result());
+            });
+        }
         if (msg.parameter().className().equals(CopybookIngestionParameter.class.getCanonicalName())) {
             CopybookIngestionParameter a = (CopybookIngestionParameter) msg.parameter();
 
@@ -224,12 +233,13 @@ public class SparkVerticle extends AbstractVerticle{
                 Object result = fileIngestionEngine.ingestCsv(a);
                 future.complete(result);
             }, res -> {
-                String s ;
+
+                String s;
                 if(res.succeeded()){
-                    s = res.result().toString();
+                    s = "{\"result\":[" + res.result() + "]}";
                 }
                 else {
-                    s = new JsonObject().encode();
+                    s = "{\"result\":[]}";
                 }
                 UserParameter parameter = SparkResponseParameter.apply(SparkResponseParameter.class.getCanonicalName(), s);
                 BaseRequest request = new BaseRequest(msg.sessionKey(), parameter,false);
