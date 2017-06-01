@@ -9,6 +9,10 @@ import org.apache.spark.sql.{SQLContext, SparkSession}
   */
 case class Query(sqlContext:SparkSession){
 
+  def queryToJson(sql:String) : Any = {
+    sqlContext.sql(sql).toJSON.collect().mkString(",")
+  }
+
   def query(sql:String) : Any = {
     val path = Utils.getTempPath
       try {

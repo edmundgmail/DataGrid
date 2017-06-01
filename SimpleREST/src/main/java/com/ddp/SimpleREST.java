@@ -46,6 +46,7 @@ import java.util.function.Function;
 import com.ddp.util.*;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.CorsHandler;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -314,6 +315,7 @@ import org.apache.hadoop.fs.Path;
         String level = routingContext.request().getParam("level");
         String name = routingContext.request().getParam("name");
 
+        if(StringUtils.isEmpty(level)) level = "root";
         UserParameter parameter = HiveHierarchyParameter.apply(HiveHierarchyParameter.class.getCanonicalName(), level, name);
         BaseRequest request = BaseRequest.apply(123, parameter, false);
         BaseConsumer consumer = BaseConsumer.apply(request, responseHandler);

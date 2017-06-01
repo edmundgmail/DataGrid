@@ -50,6 +50,7 @@ public class SparkVerticle extends AbstractVerticle{
     private static CopybookIngestion copybookIngestion;
     private static FileIngestionEngine fileIngestionEngine;
 
+
     private static UserParameterDeserializer userParameterDeserializer = UserParameterDeserializer.getInstance();
     private static Gson gson = new GsonBuilder().registerTypeAdapter(UserParameter.class, userParameterDeserializer).create();
 
@@ -206,11 +207,33 @@ public class SparkVerticle extends AbstractVerticle{
         SparkSession spark = (SparkSession) sparkSession;
 
         if(msg.parameter().className().equals(HiveHierarchyParameter.class.getCanonicalName())){
-            HiveHierarchyParameter parameter = (HiveHierarchyParameter)msg.parameter();
+            HiveHierarchyParameter a = (HiveHierarchyParameter)msg.parameter();
             vertx.executeBlocking(future -> {
+                // Call some blocking API that takes a significant amount of time to return
+                //StructType schema = buildStructType(a.schema());
+                String sql = null;
+                if(a.level().equals("root")){
+                    sql = "show databases";
+                }else if(a.level().equals("datasource")){
+                    sql = "show tables in " + a.sname();
+                }else if(a.level().equals("dataentity")){
+                    sql = "describe " + a.sname();
+                }
 
-            }, res->{
-                System.out.println("The result is: " + res.result());
+                Object result = queryEngine.queryToJson(sql);
+                future.complete(result);
+            }, res -> {
+
+                String s;
+                if(res.succeeded()){
+                    s = "{\"result\":[" + res.result() + "]}";
+                }
+                else {
+                    s = "{\"result\":[]}";
+                }
+                UserParameter parameter = SparkResponseParameter.apply(SparkResponseParameter.class.getCanonicalName(), s);
+                BaseRequest request = new BaseRequest(msg.sessionKey(), parameter,false);
+                message.reply(request);
             });
         }
         if (msg.parameter().className().equals(CopybookIngestionParameter.class.getCanonicalName())) {
