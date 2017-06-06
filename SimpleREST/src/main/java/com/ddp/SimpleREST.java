@@ -42,6 +42,7 @@ import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import com.ddp.util.*;
 import io.vertx.ext.web.handler.BodyHandler;
@@ -204,7 +205,9 @@ import org.apache.hadoop.fs.Path;
         Consumer<String> responseHandler = s -> response.putHeader("content-type", "application/json").end(s);
 
         Map<String, FileUpload> files = getUploadedFiles(ctx);
-        ScalaSourceParameter scalaSourceParameter = ScalaSourceParameter.apply(ScalaSourceParameter.class.getCanonicalName(), String.join(":", files.keySet()));
+        String filenames = files.values().stream().map(f->f.uploadedFileName()).collect( Collectors.joining( "," ) );
+        String names[] = files.get(files.keySet().toArray()[0]).name().split(".");
+        ScalaSourceParameter scalaSourceParameter = ScalaSourceParameter.apply(ScalaSourceParameter.class.getCanonicalName(), String.join(":", files.keySet()), names[0], names[1], filenames);
         Random random = new Random();
         Integer sessionKey = random.nextInt(10000);
         BaseRequest request = BaseRequest.apply(sessionKey, scalaSourceParameter,false);

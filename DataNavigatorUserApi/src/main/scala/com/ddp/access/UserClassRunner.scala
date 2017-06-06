@@ -61,7 +61,7 @@ case class CopybookIngestionParameter(    //code 1
 
 case class JarParamter(override  val className: String, hdfsPaths:String)  extends UserParameter
 
-case class ScalaSourceParameter(override val className : String, srcHdfsPath: String)  extends UserParameter
+case class ScalaSourceParameter(override val className : String, srcHdfsPath: String, owner:String, reportName: String, filenames: String)  extends UserParameter
 
 case class QueryParameter(override val className: String, sql:String) extends UserParameter
 

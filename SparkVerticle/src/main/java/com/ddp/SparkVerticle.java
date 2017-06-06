@@ -21,6 +21,7 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
+import io.vertx.ext.jdbc.JDBCClient;
 import org.apache.spark.SparkConf;
 import org.apache.spark.sql.SparkSession;
 
@@ -49,7 +50,10 @@ public class SparkVerticle extends AbstractVerticle{
     private static Query queryEngine;
     private static CopybookIngestion copybookIngestion;
     private static FileIngestionEngine fileIngestionEngine;
-
+    private static String sqlDriverClass;
+    private static String sqlUrl;
+    private static JDBCClient client;
+    private static ScriptLoader scriptLoader;
 
     private static UserParameterDeserializer userParameterDeserializer = UserParameterDeserializer.getInstance();
     private static Gson gson = new GsonBuilder().registerTypeAdapter(UserParameter.class, userParameterDeserializer).create();
@@ -60,6 +64,8 @@ public class SparkVerticle extends AbstractVerticle{
     private static void initConfig(JsonObject js){
         sparkAppName = js.getString("spark.appname");
         sparkMaster = js.getString("spark.master");
+        sqlDriverClass = js.getString("driver.class");
+        sqlUrl = js.getString("sql.url");
 
     }
 
@@ -73,7 +79,7 @@ public class SparkVerticle extends AbstractVerticle{
         }
     }
 
-    private static void createEngines()
+    private static void createEngines(JDBCClient client)
     {
         queryEngine = Query.apply(sparkSession);
         runUserClass = RunUserClass.apply(jclFactory, jcl);
@@ -81,6 +87,7 @@ public class SparkVerticle extends AbstractVerticle{
         scalaSourceCompiiler = ScalaSourceCompiiler.apply(jclFactory, jcl);
         copybookIngestion = CopybookIngestion.apply(sparkSession.sqlContext());
         fileIngestionEngine = FileIngestionEngine.apply(sparkSession.sqlContext());
+        scriptLoader = new ScriptLoader(client, scalaSourceCompiiler);
     }
 
     private static Object createSparkSession() {
@@ -173,7 +180,13 @@ public class SparkVerticle extends AbstractVerticle{
 
     public void start() {
         sparkSession = (SparkSession) createSparkSession();
-        createEngines();
+
+        client = JDBCClient.createShared(vertx, new JsonObject()
+                .put("url", sqlUrl)
+                .put("driver_class", sqlDriverClass)
+                .put("max_pool_size", 30));
+        createEngines(client);
+        scriptLoader.load();
 
         EventBus eventBus = getVertx().eventBus();
         eventBus.registerDefaultCodec(BaseRequest.class, new BaseRequestCodec());
@@ -287,7 +300,7 @@ public class SparkVerticle extends AbstractVerticle{
 
             vertx.executeBlocking(future -> {
                 // Call some blocking API that takes a significant amount of time to return
-                Object result = scalaSourceCompiiler.compile(a);
+                Object result = scalaSourceCompiiler.compile(a, scriptLoader);
                 future.complete(formatResult(msg,result));
             }, res -> {
                 System.out.println("The result is: " + res.result());

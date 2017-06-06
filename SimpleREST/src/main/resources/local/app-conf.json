@@ -4,10 +4,6 @@
   "sql.url": "jdbc:mysql://localhost:3306/metadata_ddp?user=ddp&password=password",
   "local.upload.home":"/tmp/upload",
   "hdfs.upload.home":"/user/cloudera/upload",
-  "kafka.brokers":"localhost:9092",
-  "out.topic":"topic.to.sparkVerticle",
-  "in.topic":"topic.to.restVerticle",
-  "group.id" : "group.rest",
   "eventbus.schedverticle":"eventbus.schedverticle"
 
 }

@@ -1,9 +1,6 @@
 {
   "spark.master":"local[2]",
   "spark.appname":"my-spark-app",
-
-  "kafka.brokers":"localhost:9092",
-  "in.topic":"topic.to.sparkVerticle",
-  "out.topic":"topic.to.restVerticle",
-  "group.id" : "group.spark"
+  "driver.class": "com.mysql.jdbc.Driver",
+  "sql.url": "jdbc:mysql://localhost:3306/metadata_ddp?user=ddp&password=password"
 }
