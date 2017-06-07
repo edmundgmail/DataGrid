@@ -13,6 +13,7 @@ case class BaseConsumer(val baseRequest: BaseRequest, val responseHandler : Cons
 case class BaseRequest(sessionKey : Long,  parameter: UserParameter, needPadding: Boolean = false)
 
 case class NewDataSourceParameter(override val className:String, level: String, name: String, desc: String, sourceId:Long) extends UserParameter
+case class NewScriptParameter(override val className:String, level : String, name : String, parentLevel: String, parentName: String, content:String) extends UserParameter
 
 case class UserClassParameter(override val className:String, userClassName:String, useSpark : Boolean = false) extends UserParameter
 

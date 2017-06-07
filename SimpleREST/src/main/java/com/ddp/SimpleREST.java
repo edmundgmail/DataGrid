@@ -19,6 +19,7 @@ package com.ddp;
 import com.ddp.access.*;
 import com.ddp.hierarchy.DataBrowse;
 import com.ddp.hierarchy.IDataBrowse;
+import com.ddp.hierarchy.UserScriptManager;
 import com.ddp.utils.Utils;
 
 import com.google.gson.Gson;
@@ -58,6 +59,8 @@ import org.apache.hadoop.fs.Path;
  */
  public class SimpleREST extends AbstractVerticle {
   private IDataBrowse dataBrowse;
+  private UserScriptManager userScriptManager;
+
   private Logger LOGGER = LoggerFactory.getLogger("SimpleREST");
   private JDBCClient client;
 
@@ -141,11 +144,30 @@ import org.apache.hadoop.fs.Path;
               .setUploadsDirectory(localUploadHome));
       router.post("/postSampleFiles").handler(this::postSampleFiles);
 
+      router.post("/postUserFunctionHierarchy").handler(this::postUserFunctionHierarchy);
+
 
       vertx.createHttpServer().requestHandler(router::accept).listen(httpPort);
 
       eventBus = getVertx().eventBus();
       eventBus.registerDefaultCodec(BaseRequest.class, new BaseRequestCodec());
+
+    }
+
+    private void postUserFunctionHierarchy(RoutingContext ctx){
+        HttpServerResponse response = ctx.response();
+        Consumer<Integer> errorHandler = i -> response.setStatusCode(i).end();
+        Consumer<String> responseHandler = s -> response.putHeader("content-type", "application/json").end(s);
+        ctx.request().bodyHandler(new Handler<Buffer>() {
+            @Override
+            public void handle(Buffer buffer) {
+                LOGGER.info("buffer=" + buffer.toString());
+                BaseRequest request = gson.fromJson(buffer.toString(), BaseRequest.class);
+                NewScriptParameter newScriptParameter = (NewScriptParameter) request.parameter();
+
+                userScriptManager.loadReport
+            }
+        });
 
     }
 
@@ -348,6 +370,8 @@ import org.apache.hadoop.fs.Path;
              .put("max_pool_size", 30));
 
      dataBrowse = new DataBrowse(client);
+     userScriptManager = new UserScriptManager(client);
+
 
      //eventBus = getVertx().eventBus();
      //eventBus.registerDefaultCodec(CustomMessage.class, new CustomMessageCodec());
