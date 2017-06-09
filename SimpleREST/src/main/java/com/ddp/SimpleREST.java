@@ -149,12 +149,24 @@ import org.apache.hadoop.fs.Path;
       router.post("/userFunctionHierarchy").handler(this::postUserFunctionHierarchy);
       router.get("/userFunctionHierarchy").handler(this::getUserFunctionHierarchy);
 
+      router.get("/userFunctionUpload").handler(this::getUserFunctionUpload);
 
       vertx.createHttpServer().requestHandler(router::accept).listen(httpPort);
 
       eventBus = getVertx().eventBus();
       eventBus.registerDefaultCodec(BaseRequest.class, new BaseRequestCodec());
 
+    }
+
+    private void getUserFunctionUpload(RoutingContext ctx){
+        HttpServerResponse response = ctx.response();
+        Consumer<String> errorHandler = i -> response.putHeader("content-type", "application/json").setStatusCode(500).setStatusMessage(i).end();
+        Consumer<String> responseHandler = s -> response.putHeader("content-type", "application/json").end(s);
+
+        String owner = ctx.request().getParam("owner");
+        String report = ctx.request().getParam("report");
+
+        ScriptDataBrowse.
     }
 
     private void getUserFunctionHierarchy(RoutingContext ctx){
