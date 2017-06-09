@@ -19,6 +19,7 @@ package com.ddp;
 import com.ddp.access.*;
 import com.ddp.hierarchy.DataBrowse;
 import com.ddp.hierarchy.IDataBrowse;
+import com.ddp.hierarchy.ScriptDataBrowse;
 import com.ddp.hierarchy.UserScriptManager;
 import com.ddp.utils.Utils;
 
@@ -60,6 +61,7 @@ import org.apache.hadoop.fs.Path;
  public class SimpleREST extends AbstractVerticle {
   private IDataBrowse dataBrowse;
   private UserScriptManager userScriptManager;
+  private IDataBrowse scriptDataBroswe;
 
   private Logger LOGGER = LoggerFactory.getLogger("SimpleREST");
   private JDBCClient client;
@@ -144,7 +146,8 @@ import org.apache.hadoop.fs.Path;
               .setUploadsDirectory(localUploadHome));
       router.post("/postSampleFiles").handler(this::postSampleFiles);
 
-      router.post("/postUserFunctionHierarchy").handler(this::postUserFunctionHierarchy);
+      router.post("/userFunctionHierarchy").handler(this::postUserFunctionHierarchy);
+      router.get("/userFunctionHierarchy").handler(this::getUserFunctionHierarchy);
 
 
       vertx.createHttpServer().requestHandler(router::accept).listen(httpPort);
@@ -154,18 +157,42 @@ import org.apache.hadoop.fs.Path;
 
     }
 
+    private void getUserFunctionHierarchy(RoutingContext ctx){
+        LOGGER.debug("in getUserFunctionHierarchy ");
+        HttpServerResponse response = ctx.response();
+        Consumer<String> errorHandler = i -> response.putHeader("content-type", "application/json").setStatusCode(500).setStatusMessage(i).end();
+        Consumer<String> responseHandler = s -> response.putHeader("content-type", "application/json").end(s);
+
+        String level = ctx.request().getParam("level");
+        Integer id = NumberUtils.toInt(ctx.request().getParam("id"), 0);
+        scriptDataBroswe.handleListHierarchy(errorHandler, responseHandler, 0, 0, level, new Long(id));
+
+
+    }
+
     private void postUserFunctionHierarchy(RoutingContext ctx){
         HttpServerResponse response = ctx.response();
-        Consumer<Integer> errorHandler = i -> response.setStatusCode(i).end();
+        Consumer<String> errorHandler = i -> response.putHeader("content-type", "application/json").setStatusCode(500).setStatusMessage(i).end();
         Consumer<String> responseHandler = s -> response.putHeader("content-type", "application/json").end(s);
         ctx.request().bodyHandler(new Handler<Buffer>() {
             @Override
             public void handle(Buffer buffer) {
                 LOGGER.info("buffer=" + buffer.toString());
                 BaseRequest request = gson.fromJson(buffer.toString(), BaseRequest.class);
-                NewScriptParameter newScriptParameter = (NewScriptParameter) request.parameter();
+                UserScriptParameter userScriptParameter = (UserScriptParameter) request.parameter();
 
-                userScriptManager.loadReport
+                if(userScriptParameter.action().equalsIgnoreCase("add")){ //to add
+                    userScriptManager.loadUserScript(responseHandler, errorHandler, userScriptParameter.level(), userScriptParameter.name(), userScriptParameter.content(), userScriptParameter.id(), userScriptParameter.parentId());
+                }
+                else if(userScriptParameter.action().equalsIgnoreCase("remove") && userScriptParameter.id() > 0)
+                {
+                    userScriptManager.removeUserScript(responseHandler, errorHandler, userScriptParameter.level(), userScriptParameter.id());
+                }
+                else
+                {
+                    errorHandler.accept("Invalid parameters");
+                }
+
             }
         });
 
@@ -194,7 +221,7 @@ import org.apache.hadoop.fs.Path;
 
     private void postSampleFiles(RoutingContext ctx){
         HttpServerResponse response = ctx.response();
-        Consumer<Integer> errorHandler = i -> response.setStatusCode(i).end();
+        Consumer<String> errorHandler = i -> response.putHeader("content-type", "application/json").setStatusCode(500).setStatusMessage(i).end();
         Consumer<String> responseHandler = s -> response.putHeader("content-type", "application/json").end(s);
 
         Map<String, FileUpload> files = getUploadedFiles(ctx);
@@ -223,7 +250,7 @@ import org.apache.hadoop.fs.Path;
 
     private void postScalaFiles(RoutingContext ctx){
         HttpServerResponse response = ctx.response();
-        Consumer<Integer> errorHandler = i -> response.setStatusCode(i).end();
+        Consumer<String> errorHandler = i -> response.putHeader("content-type", "application/json").setStatusCode(500).setStatusMessage(i).end();
         Consumer<String> responseHandler = s -> response.putHeader("content-type", "application/json").end(s);
 
         Map<String, FileUpload> files = getUploadedFiles(ctx);
@@ -240,7 +267,7 @@ import org.apache.hadoop.fs.Path;
 
     private void postJars(RoutingContext ctx){
         HttpServerResponse response = ctx.response();
-        Consumer<Integer> errorHandler = i -> response.setStatusCode(i).end();
+        Consumer<String> errorHandler = i -> response.putHeader("content-type", "application/json").setStatusCode(500).setStatusMessage(i).end();
         Consumer<String> responseHandler = s -> response.putHeader("content-type", "application/json").end(s);
 
         // in your example you only handle 1 file upload, here you can handle
@@ -281,7 +308,7 @@ import org.apache.hadoop.fs.Path;
 
     private void postHierarchy(RoutingContext routingContext){
         HttpServerResponse response = routingContext.response();
-        Consumer<Integer> errorHandler = i -> response.setStatusCode(i).end();
+        Consumer<String> errorHandler = i -> response.putHeader("content-type", "application/json").setStatusCode(500).setStatusMessage(i).end();
         Consumer<String> responseHandler = s -> response.putHeader("content-type", "application/json").end(s);
 
         routingContext.request().bodyHandler(new Handler<Buffer>() {
@@ -298,7 +325,7 @@ import org.apache.hadoop.fs.Path;
 
     private void postSparkRunnerCustomRequest(RoutingContext routingContext){
         HttpServerResponse response = routingContext.response();
-        Consumer<Integer> errorHandler = i -> response.setStatusCode(i).end();
+        Consumer<String> errorHandler = i -> response.putHeader("content-type", "application/json").setStatusCode(500).setStatusMessage(i).end();
         Consumer<String> responseHandler = s -> response.putHeader("content-type", "application/json").end(s);
     }
 
@@ -306,7 +333,7 @@ import org.apache.hadoop.fs.Path;
         // Custom message
 
         HttpServerResponse response = routingContext.response();
-        Consumer<Integer> errorHandler = i -> response.setStatusCode(i).end();
+        Consumer<String> errorHandler = i -> response.putHeader("content-type", "application/json").setStatusCode(500).setStatusMessage(i).end();
         Consumer<String> responseHandler = s -> response.putHeader("content-type", "application/json").end(s);
 
         routingContext.request().bodyHandler(new Handler<Buffer>() {
@@ -334,7 +361,7 @@ import org.apache.hadoop.fs.Path;
 
     private void getHiveHierarchy(RoutingContext routingContext){
         HttpServerResponse response = routingContext.response();
-        Consumer<Integer> errorHandler = i-> response.setStatusCode(i).end();
+        Consumer<String> errorHandler = i -> response.putHeader("content-type", "application/json").setStatusCode(500).setStatusMessage(i).end();
         Consumer<String> responseHandler = s-> response.putHeader("content-type", "application/json").end(s);
 
         String level = routingContext.request().getParam("level");
@@ -350,7 +377,7 @@ import org.apache.hadoop.fs.Path;
 
     private void getListHierarchy(RoutingContext routingContext){
     HttpServerResponse response = routingContext.response();
-    Consumer<Integer> errorHandler = i-> response.setStatusCode(i).end();
+    Consumer<String> errorHandler = i -> response.putHeader("content-type", "application/json").setStatusCode(500).setStatusMessage(i).end();
     Consumer<String> responseHandler = s-> response.putHeader("content-type", "application/json").end(s);
 
     int pageNum = NumberUtils.toInt(routingContext.request().getParam("pageNum"), 0);
@@ -370,6 +397,7 @@ import org.apache.hadoop.fs.Path;
              .put("max_pool_size", 30));
 
      dataBrowse = new DataBrowse(client);
+     scriptDataBroswe = new ScriptDataBrowse(client);
      userScriptManager = new UserScriptManager(client);
 
 

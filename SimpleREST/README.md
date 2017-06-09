@@ -76,3 +76,19 @@ $curl -v -F upload=@PiJob.jar localhost:8082/postJars
       "Schema" : "cif.Cars"
     }
 }
+
+http://localhost:8082/postUserFunctionHierarchy
+{
+    "sessionKey":"123",
+    "needPadding":false,
+    "parameter": {
+      "className" : "com.ddp.access.UserScriptParameter",
+      "action":"add",
+      "level":"owner",
+      "name":"guoe3",
+      "id":-1,
+      "parentId": 0,
+      "content": ""
+    }
+}
+

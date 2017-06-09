@@ -11,7 +11,7 @@ import java.util.function.Function;
  * Created by cloudera on 1/24/17.
  */
 public interface IDataBrowse {
-    public void handleListHierarchy(Consumer<Integer> errHandler, Consumer<String> responseHandler, int pageNum, int pageSize, String level, Long id);
-    public void handleUpdateHierarchy(Consumer<Integer> errHandler, Consumer<String> responseHandler, NewDataSourceParameter newDataSourceParameter);
+    public void handleListHierarchy(Consumer<String> errHandler, Consumer<String> responseHandler, int pageNum, int pageSize, String level, Long id);
+    public void handleUpdateHierarchy(Consumer<String> errHandler, Consumer<String> responseHandler, NewDataSourceParameter newDataSourceParameter);
     public void getEntityDetail(String entityName, Consumer<String> c);
 }

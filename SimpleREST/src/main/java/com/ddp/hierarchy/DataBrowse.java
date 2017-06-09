@@ -29,7 +29,7 @@ public class DataBrowse implements IDataBrowse{
 
     public DataBrowse(JDBCClient client){this.client=client;}
 
-    public void handleUpdateHierarchy(Consumer<Integer> errHandler, Consumer<String> responseHandler, NewDataSourceParameter newDataSourceParameter){
+    public void handleUpdateHierarchy(Consumer<String> errHandler, Consumer<String> responseHandler, NewDataSourceParameter newDataSourceParameter){
 
         client.getConnection( res-> {
             if(res.succeeded()) {
@@ -39,7 +39,8 @@ public class DataBrowse implements IDataBrowse{
                             new JsonArray().add(newDataSourceParameter.name()).add(newDataSourceParameter.desc()),
                             (ar) -> {
                                 if (ar.failed()) {
-                                    errHandler.accept(500);
+                                    errHandler.accept(ar.cause().toString());
+                                    res.result().close();
                                     return;
                                 }
                                 UpdateResult result = ar.result();
@@ -48,6 +49,7 @@ public class DataBrowse implements IDataBrowse{
                                 o.put("id", result.getKeys().getLong(0));
 
                                 responseHandler.accept(o.encode());
+                                res.result().close();
                             });
                 }
                 else if(newDataSourceParameter.level().equalsIgnoreCase("dataentity")){
@@ -56,7 +58,8 @@ public class DataBrowse implements IDataBrowse{
                             new JsonArray().add(newDataSourceParameter.name()).add(newDataSourceParameter.desc()).add(newDataSourceParameter.sourceId()),
                             (ar) -> {
                                 if (ar.failed()) {
-                                    errHandler.accept(500);
+                                    errHandler.accept(ar.cause().toString());
+                                    res.result().close();
                                     return;
                                 }
                                 UpdateResult result = ar.result();
@@ -65,6 +68,7 @@ public class DataBrowse implements IDataBrowse{
                                 o.put("id", result.getKeys().getLong(0));
 
                                 responseHandler.accept(o.encode());
+                                res.result().close();
                             });
                 }
 
@@ -88,6 +92,7 @@ public class DataBrowse implements IDataBrowse{
                     if(query.succeeded()){
                         c.accept(new JsonArray(query.result().getRows()).encode());
                     }
+                    res.result().close();
                 });
             }
         });
@@ -102,7 +107,7 @@ public class DataBrowse implements IDataBrowse{
         }*/
     }
 
-    public void handleListHierarchy(Consumer<Integer> errorHandler, Consumer<String> responseHandler, int pageNum, int pageSize, String level, Long id) {
+    public void handleListHierarchy(Consumer<String> errorHandler, Consumer<String> responseHandler, int pageNum, int pageSize, String level, Long id) {
         client.getConnection( res-> {
             if(res.succeeded()){
                 if(StringUtils.isEmpty(level))
@@ -112,49 +117,51 @@ public class DataBrowse implements IDataBrowse{
                 else if(level.equalsIgnoreCase("dataentity"))
                     listDataFields(res.result(), id,  pageNum, pageSize, errorHandler, responseHandler);
                 else
-                    errorHandler.accept(500);
+                    errorHandler.accept("invalid parameter");
             }
         });
     }
 
 
-    private void listDataFields(SQLConnection conn, Long entityID,  int pageNum, int pageSize, Consumer<Integer> errorHandler, Consumer<String> responseHandler) {
+    private void listDataFields(SQLConnection conn, Long entityID,  int pageNum, int pageSize, Consumer<String> errorHandler, Consumer<String> responseHandler) {
         conn.queryWithParams("SELECT datafield_id as id, sname as name, 'datafield' as level, business_desc as description FROM datafield where entity_id=? LIMIT ?, ?", new JsonArray().add(entityID).add(pageNum).add(pageSize), query -> {
             if (query.failed()) {
-                errorHandler.accept(500);
+                errorHandler.accept(query.cause().toString());
             } else {
                 if (query.result().getNumRows() == 0) {
-                    errorHandler.accept(500);
+                    errorHandler.accept("result has 0 row");
                 } else {
 
                     responseHandler.accept(new JsonArray(query.result().getRows()).encode());
                 }
             }
+            conn.close();
         });
     }
 
-    private void listDataEntities(SQLConnection conn, Long sourceID,  int pageNum, int pageSize, Consumer<Integer> errorHandler, Consumer<String> responseHandler) {
+    private void listDataEntities(SQLConnection conn, Long sourceID,  int pageNum, int pageSize, Consumer<String> errorHandler, Consumer<String> responseHandler) {
         conn.queryWithParams("SELECT dataentity_id as id, sname as name, 'dataentity' as level, business_desc as description, source_id as sourceId FROM dataentity where source_id=? LIMIT ?, ?", new JsonArray().add(sourceID).add(pageNum).add(pageSize), query -> {
             if (query.failed()) {
-                errorHandler.accept(500);
+                errorHandler.accept(query.cause().toString());
             } else {
                 if (query.result().getNumRows() == 0) {
-                    errorHandler.accept(500);
+                    errorHandler.accept("result include 0 row");
                 } else {
 
                     responseHandler.accept(new JsonArray(query.result().getRows()).encode());
                 }
             }
+            conn.close();
         });
     }
 
-    private void listDataSources(SQLConnection conn,  int pageNum, int pageSize, Consumer<Integer> errorHandler, Consumer<String> responseHandler){
+    private void listDataSources(SQLConnection conn,  int pageNum, int pageSize, Consumer<String> errorHandler, Consumer<String> responseHandler){
         conn.queryWithParams("SELECT datasource_id as id, sname as name, 'datasource' as level, business_desc as description FROM datasource LIMIT ?, ?", new JsonArray().add(pageNum).add(pageSize), query -> {
             if (query.failed()) {
-                errorHandler.accept(500);
+                errorHandler.accept(query.cause().toString());
             } else {
                 if (query.result().getNumRows() == 0) {
-                    errorHandler.accept(500);
+                    errorHandler.accept("result include no row");
                 } else {
 
                     //String s = query.result().getRows().stream().map(r->r.encode()).reduce("", (a,b)->a+b);
@@ -162,6 +169,7 @@ public class DataBrowse implements IDataBrowse{
                     responseHandler.accept(new JsonArray(query.result().getRows()).encode());
                 }
             }
+            conn.close();
         });
     }
 }
