@@ -307,6 +307,20 @@ public class SparkVerticle extends AbstractVerticle{
             });
 
         }
+        else if(msg.parameter().className().equals(ScalaTextParameter.class.getCanonicalName())){
+            ScalaTextParameter a = (ScalaTextParameter)msg.parameter();
+
+            vertx.executeBlocking(future -> {
+                // Call some blocking API that takes a significant amount of time to return
+                Object result = scalaSourceCompiiler.compile(a.sources());
+                future.complete(formatResult(msg,result));
+            }, res -> {
+                UserParameter parameter = SparkResponseParameter.apply(SparkResponseParameter.class.getCanonicalName(), res.result().toString());
+                BaseRequest request = new BaseRequest(msg.sessionKey(), parameter,false);
+                message.reply(request);
+            });
+
+        }
         else if(msg.parameter().className().equals(JarParamter.class.getCanonicalName())){
             JarParamter a = (JarParamter)msg.parameter();
 

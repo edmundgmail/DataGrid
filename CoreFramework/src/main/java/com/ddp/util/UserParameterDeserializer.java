@@ -30,6 +30,8 @@ public class UserParameterDeserializer implements JsonDeserializer<UserParameter
         instance.registerDataType(SparkResponseParameter.class.getName(), SparkResponseParameter.class);
         instance.registerDataType(HiveHierarchyParameter.class.getName(), HiveHierarchyParameter.class);
         instance.registerDataType(UserScriptParameter.class.getName(), UserScriptParameter.class);
+        instance.registerDataType(ScalaTextParameter.class.getName(), ScalaTextParameter.class);
+
 
         return instance;
     }

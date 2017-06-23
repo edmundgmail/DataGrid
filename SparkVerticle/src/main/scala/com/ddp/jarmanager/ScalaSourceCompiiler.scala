@@ -6,6 +6,7 @@ import com.ddp.ScriptLoader
 import com.ddp.access.ScalaSourceParameter
 import com.ddp.utils.Utils
 import com.twitter.util.Eval
+import com.typesafe.scalalogging.Logger
 import org.apache.commons.io.{FileUtils, IOUtils}
 import org.apache.commons.lang3.StringUtils
 import org.apache.hadoop
@@ -22,8 +23,47 @@ import scala.tools.scalap.scalax.util.StringUtil
 
 case class ScalaSourceCompiiler (jclFactory : JclObjectFactory, jcl: JarClassLoader) {
 
+  val LOGGER = Logger("ScalaSourceCompiiler")
+
+  def compile(sources : java.util.List[String]): Any ={
+    try{
+
+
+      LOGGER.info(s"in ScalaSourceCompiiler.compile")
+      val  targetDir = new File("target_" + System.currentTimeMillis + "_" + util.Random.nextInt(10000) + ".tmp")
+
+      targetDir.mkdir
+
+      val eval = new Eval(Some(targetDir))
+
+      for(source<-sources) eval.compile(source)
+      val jarFile = CreateJarFile.mkJar(targetDir, "Main")
+      val clazzNames = JarEnumerator.getClazzNames(jarFile)
+
+      for(p<-clazzNames){
+        try{
+          jcl.unloadClass(p)
+        }
+        catch{
+          case e: Throwable => e.printStackTrace()
+        }
+
+      }
+
+      jcl.add(jarFile)
+
+      FileUtils.forceDelete(targetDir)
+      FileUtils.forceDelete(new File(jarFile))
+
+      "Success"
+    }
+    catch {
+      case _ : Throwable=>"Failed"
+    }
+  }
+
   def compile(sources : String): Unit ={
-    if(StringUtils.isEmpty(sources)) {
+    if(!StringUtils.isEmpty(sources)) {
     val  targetDir = new File("target_" + System.currentTimeMillis + "_" + util.Random.nextInt(10000) + ".tmp")
 
     targetDir.mkdir
@@ -61,6 +101,7 @@ case class ScalaSourceCompiiler (jclFactory : JclObjectFactory, jcl: JarClassLoa
 
     val pathArray = sourceFiles.srcHdfsPath.split(":")
     val fs = Utils.getHdfs
+
     for(p<-pathArray){
       val inputStream = new BufferedInputStream (fs.open (new Path( p) ) )
       val source = IOUtils.toString(inputStream, "UTF-8")

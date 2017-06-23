@@ -52,6 +52,7 @@ public class ScriptLoader {
     }
 
     public void load() {
+        /*
         client.getConnection(res -> {
             if (res.succeeded()) {
                 String sql = "select u1.owner, u1.name, u1.filename, u1.version, u1.content, u1.serial from userscript as u1 inner join (select owner, name, filename, max(version) as max_version from userscript group by owner, name, filename) u2 on u1.owner=u2.owner and u1.name=u2.name and u1.filename=u2.filename and u1.version=u2.max_version group by owner, name order by serial";
@@ -65,7 +66,7 @@ public class ScriptLoader {
                     }
                 });
             }
-        });
+        });*/
     }
 
 }

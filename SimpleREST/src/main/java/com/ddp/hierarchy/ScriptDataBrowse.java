@@ -80,22 +80,6 @@ public class ScriptDataBrowse implements IDataBrowse {
         });
     }
 
-    private void showReportFiles(SQLConnection conn, Long id, int pageNum, int pageSize, Consumer<String> errorHandler, Consumer<String> responseHandler)
-    {
-        conn.queryWithParams("SELECT id, filename as name, 'file' as level, content from report_files where id=?", new JsonArray().add(id) , query -> {
-            if (query.failed()) {
-                errorHandler.accept(query.cause().toString());
-            } else {
-                if (query.result().getNumRows() == 0) {
-                    errorHandler.accept("result has 0 row");
-                } else {
-
-                    responseHandler.accept(new JsonArray(query.result().getRows()).encode());
-                }
-            }
-            conn.close();
-        });
-    }
 
     public void handleListHierarchy(Consumer<String> errorHandler, Consumer<String> responseHandler, int pageNum, int pageSize, String level, Long id){
         LOGGER.debug("in handleListHierarchy ");
@@ -107,8 +91,8 @@ public class ScriptDataBrowse implements IDataBrowse {
                     listOwners(res.result(), id, pageNum, pageSize, errorHandler, responseHandler);
                 else if(level.equalsIgnoreCase("owner"))
                     listReports(res.result(),id,  pageNum, pageSize, errorHandler, responseHandler);
-                else if(level.equalsIgnoreCase( "file"))
-                    showReportFiles(res.result(), id, pageNum, pageSize, errorHandler, responseHandler);
+                else if(level.equalsIgnoreCase( "report"))
+                    listReportFiles(res.result(), id, pageNum, pageSize, errorHandler, responseHandler);
                 else
                     errorHandler.accept("invalid parameter");
             }

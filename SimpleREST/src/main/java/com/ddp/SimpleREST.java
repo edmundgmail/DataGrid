@@ -149,7 +149,7 @@ import org.apache.hadoop.fs.Path;
       router.post("/userFunctionHierarchy").handler(this::postUserFunctionHierarchy);
       router.get("/userFunctionHierarchy").handler(this::getUserFunctionHierarchy);
 
-      router.get("/userFunctionUpload").handler(this::getUserFunctionUpload);
+      router.get("/userFunctionCompile").handler(this::getUserFunctionCompile);
 
       vertx.createHttpServer().requestHandler(router::accept).listen(httpPort);
 
@@ -158,15 +158,15 @@ import org.apache.hadoop.fs.Path;
 
     }
 
-    private void getUserFunctionUpload(RoutingContext ctx){
+    private void getUserFunctionCompile(RoutingContext ctx){
         HttpServerResponse response = ctx.response();
         Consumer<String> errorHandler = i -> response.putHeader("content-type", "application/json").setStatusCode(500).setStatusMessage(i).end();
         Consumer<String> responseHandler = s -> response.putHeader("content-type", "application/json").end(s);
 
-        String owner = ctx.request().getParam("owner");
-        String report = ctx.request().getParam("report");
+        Long id  = NumberUtils.toLong(ctx.request().getParam("id"));
 
-        ScriptDataBrowse.
+        LOGGER.info("calling userScriptManager.uploadReport, id=" + id);
+        userScriptManager.uploadReport(responseHandler, errorHandler, id);
     }
 
     private void getUserFunctionHierarchy(RoutingContext ctx){
@@ -253,7 +253,7 @@ import org.apache.hadoop.fs.Path;
             parameter= CsvIngestionParameter.apply(CsvIngestionParameter.class.getCanonicalName(), hdfsPath, tableName, null, null,  false, 100);
         }
 
-        BaseRequest baseRequest = BaseRequest.apply(123, parameter, false);
+        BaseRequest baseRequest = BaseRequest.apply(0, parameter, false);
 
         sendToSpark(BaseConsumer.apply(baseRequest, responseHandler));
 
@@ -298,7 +298,7 @@ import org.apache.hadoop.fs.Path;
     }
 
 
-    private static void sendToSpark(BaseConsumer baseConsumer ){
+    public static void sendToSpark(BaseConsumer baseConsumer ){
         eventBus.send("cluster-message-receiver", baseConsumer.baseRequest(), reply -> {
             if (reply.succeeded()) {
                 BaseRequest replyMessage = (BaseRequest) reply.result().body();
@@ -381,7 +381,7 @@ import org.apache.hadoop.fs.Path;
 
         if(StringUtils.isEmpty(level)) level = "root";
         UserParameter parameter = HiveHierarchyParameter.apply(HiveHierarchyParameter.class.getCanonicalName(), level, name);
-        BaseRequest request = BaseRequest.apply(123, parameter, false);
+        BaseRequest request = BaseRequest.apply(0, parameter, false);
         BaseConsumer consumer = BaseConsumer.apply(request, responseHandler);
         sendToSpark(consumer);
 

@@ -1,5 +1,10 @@
 package com.ddp.hierarchy;
 
+import com.ddp.SimpleREST;
+import com.ddp.access.BaseConsumer;
+import com.ddp.access.BaseRequest;
+import com.ddp.access.ScalaSourceParameter;
+import com.ddp.access.ScalaTextParameter;
 import com.ddp.utils.Utils;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -10,7 +15,11 @@ import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.fs.Path;
 
 import java.io.BufferedInputStream;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 /**
  * Created by cloudera on 6/6/17.
@@ -23,7 +32,33 @@ public class UserScriptManager {
 
     public UserScriptManager(JDBCClient client){this.client=client;}
 
+    public void uploadReport(Consumer<String> responseHandler, Consumer<String> errorHandler,  Long id){
+        LOGGER.info("in uploadReport");
+        client.getConnection(res -> {
+            LOGGER.info("got connection");
+            String sql = "select f.content from report_files f where report_id=?";
+            if (res.succeeded()) {
+                LOGGER.info("res.succeeded");
+                res.result().queryWithParams(sql,
+                        new JsonArray().add(id),
+                        (ar) -> {
+                            if (ar.failed()) {
+                                errorHandler.accept(ar.cause().toString());
+                            }
+                            else{
+                                LOGGER.info(ar.result().toJson());
+                                List<String> sources= ar.result().getResults().stream().map((r)->r.getString(0)).collect(Collectors.toList());
+                                //new ArrayList<String>();
 
+                                ScalaTextParameter parameter = ScalaTextParameter.apply(ScalaTextParameter.class.getCanonicalName(), sources);
+                                BaseRequest request = BaseRequest.apply(0, parameter, false);
+                                SimpleREST.sendToSpark(BaseConsumer.apply(request, responseHandler));
+                            }
+                        });
+            }
+            res.result().close();
+        });
+    }
 
     public void loadReports(String owner, String reportName, String hdfsFileNames) throws Exception{
         String names[] = hdfsFileNames.split(":");
